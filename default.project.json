@@ -1,0 +1,48 @@
+{
+  "name": "TycoonDeFPS",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "$ignoreUnknownInstances": true,
+      "WeaponConfig": {
+        "$path": "src/shared/WeaponConfig.lua"
+      },
+      "FireWeaponEvent": {
+        "$className": "RemoteEvent"
+      },
+      "EquipWeaponEvent": {
+        "$className": "RemoteEvent"
+      }
+    },
+
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "$ignoreUnknownInstances": true,
+      "WeaponService": {
+        "$path": "src/server/WeaponService.server.lua"
+      }
+    },
+
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "$ignoreUnknownInstances": true,
+        "ClientWeaponEquipAndFire": {
+          "$path": "src/client/ClientWeaponEquipAndFire.client.lua"
+        },
+        "AK47FireWithTracers": {
+          "$path": "src/client/AK47FireWithTracers.client.lua"
+        },
+        "ShowArmsInFirstPerson": {
+          "$path": "src/client/ShowArmsInFirstPerson.client.lua"
+        },
+        "HideCursorAndShowCrosshair": {
+          "$path": "src/client/HideCursorAndShowCrosshair.client.lua"
+        }
+      }
+    }
+  }
+}

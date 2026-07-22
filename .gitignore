@@ -1,0 +1,8 @@
+# Rojo build artifacts
+*.rbxl
+*.rbxlx
+sourcemap.json
+
+# OS junk
+.DS_Store
+Thumbs.db
