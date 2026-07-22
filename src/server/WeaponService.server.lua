@@ -1,36 +1,122 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local DataStoreService = game:GetService("DataStoreService")
 
 local WeaponConfig = require(ReplicatedStorage:WaitForChild("WeaponConfig"))
 local EquipWeaponEvent = ReplicatedStorage:WaitForChild("EquipWeaponEvent")
 local FireWeaponEvent = ReplicatedStorage:WaitForChild("FireWeaponEvent")
 
--- Server-owned source of truth: what weapon each player actually has equipped,
--- and when they last fired a valid shot (for rate limiting).
+local loadoutStore = DataStoreService:GetDataStore("PlayerLoadout_v1")
+
+local SLOTS = {"Primary", "Secondary", "Knife"}
+-- Every player starts owning these three; a future shop grants better weapons
+-- per slot (e.g. Primary = "SCAR-L") and that assignment gets persisted the same way.
+local DEFAULT_LOADOUT = {Primary = "AK47", Secondary = "Pistol", Knife = "Knife"}
+local DEFAULT_ACTIVE_SLOT = "Secondary"
+
+-- Server-owned source of truth: which weapon each player has assigned to each
+-- slot, which slot they're currently holding, and when they last fired a valid
+-- shot (for rate limiting).
+local loadouts = {}
+local activeSlot = {}
 local equippedWeapon = {}
 local lastFireTime = {}
 
 local MAX_ORIGIN_DISTANCE = 10 -- studs; how far camOrigin may be from the player's head before we distrust it
 local FIRE_RATE_TOLERANCE = 0.85 -- allow shots slightly faster than FireRate to absorb network jitter
 
+local function isValidForSlot(weaponName, slotName)
+    local cfg = weaponName and WeaponConfig[weaponName]
+    return cfg ~= nil and cfg.Slot == slotName
+end
+
+-- Never trust saved data blindly: a weapon could've been renamed/removed since
+-- it was saved, so fall back to the default for any slot that doesn't check out.
+local function sanitizeLoadout(rawLoadout)
+    local loadout = {}
+    for _, slotName in SLOTS do
+        local weaponName = typeof(rawLoadout) == "table" and rawLoadout[slotName]
+        if isValidForSlot(weaponName, slotName) then
+            loadout[slotName] = weaponName
+        else
+            loadout[slotName] = DEFAULT_LOADOUT[slotName]
+        end
+    end
+    return loadout
+end
+
+local function equipSlot(player, slotName)
+    local loadout = loadouts[player]
+    if not loadout then return end
+    local weaponName = loadout[slotName]
+    if not weaponName then return end -- slot locked/empty for this player
+    activeSlot[player] = slotName
+    equippedWeapon[player] = weaponName
+    player:SetAttribute("EquippedWeapon", weaponName)
+end
+
+local function loadPlayerData(player)
+    local key = "Player_" .. player.UserId
+    local ok, saved = pcall(function()
+        return loadoutStore:GetAsync(key)
+    end)
+
+    local rawLoadout, savedActiveSlot
+    if ok and typeof(saved) == "table" then
+        rawLoadout = saved.loadout
+        savedActiveSlot = saved.activeSlot
+    end
+
+    loadouts[player] = sanitizeLoadout(rawLoadout)
+    if typeof(savedActiveSlot) ~= "string" or not table.find(SLOTS, savedActiveSlot) then
+        savedActiveSlot = DEFAULT_ACTIVE_SLOT
+    end
+    equipSlot(player, savedActiveSlot)
+end
+
+local function savePlayerData(player)
+    local loadout = loadouts[player]
+    if not loadout then return end
+    local key = "Player_" .. player.UserId
+    local data = {
+        loadout = loadout,
+        activeSlot = activeSlot[player] or DEFAULT_ACTIVE_SLOT,
+    }
+    pcall(function()
+        loadoutStore:SetAsync(key, data)
+    end)
+end
+
+Players.PlayerAdded:Connect(loadPlayerData)
+
 Players.PlayerRemoving:Connect(function(player)
+    savePlayerData(player)
+    loadouts[player] = nil
+    activeSlot[player] = nil
     equippedWeapon[player] = nil
     lastFireTime[player] = nil
 end)
 
-EquipWeaponEvent.OnServerEvent:Connect(function(player, weaponName)
-    if typeof(weaponName) ~= "string" or not WeaponConfig[weaponName] then
+game:BindToClose(function()
+    for _, player in Players:GetPlayers() do
+        savePlayerData(player)
+    end
+end)
+
+-- Client requests a slot switch (which weapon to use is decided here, from the
+-- player's own loadout — the client never gets to name an arbitrary weapon).
+EquipWeaponEvent.OnServerEvent:Connect(function(player, slotName)
+    if typeof(slotName) ~= "string" or not table.find(SLOTS, slotName) then
         return
     end
-    equippedWeapon[player] = weaponName
-    player:SetAttribute("EquippedWeapon", weaponName)
+    equipSlot(player, slotName)
 end)
 
 FireWeaponEvent.OnServerEvent:Connect(function(player, camOrigin, camDir)
     local weaponName = equippedWeapon[player]
     local cfg = weaponName and WeaponConfig[weaponName]
-    if not cfg then
+    if not cfg or cfg.Type == "Melee" then
         return
     end
 

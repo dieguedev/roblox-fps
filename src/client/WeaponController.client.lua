@@ -14,15 +14,15 @@ local FireWeaponEvent = ReplicatedStorage:WaitForChild("FireWeaponEvent")
 -- Single source of truth for "what weapon is equipped": the server-owned
 -- EquippedWeapon attribute. This script only reads it; changes are requested
 -- via EquipWeaponEvent and applied here once the server confirms them back.
-local currentWeapon = LocalPlayer:GetAttribute("EquippedWeapon") or "AK47"
+local currentWeapon = LocalPlayer:GetAttribute("EquippedWeapon") or "Pistol"
 
 local function getStat(stat)
     local cfg = WeaponConfig[currentWeapon]
     return cfg and cfg[stat]
 end
 
-local function requestEquip(weaponName)
-    EquipWeaponEvent:FireServer(weaponName)
+local function requestEquipSlot(slotName)
+    EquipWeaponEvent:FireServer(slotName)
 end
 
 -- ============================================================
@@ -395,12 +395,9 @@ LocalPlayer:GetAttributeChangedSignal("EquippedWeapon"):Connect(function()
     end
 end)
 
-if LocalPlayer:GetAttribute("EquippedWeapon") == nil then
-    requestEquip("AK47")
-end
-
 -- ============================================================
--- Input: equip (1/2) and fire (mouse1), one listener each for the whole client.
+-- Input: equip slots (1 = Primary, 2 = Secondary, 3 = Knife) and fire (mouse1).
+-- One listener each for the whole client.
 -- ============================================================
 
 UserInputService.InputBegan:Connect(function(input, processed)
@@ -408,18 +405,24 @@ UserInputService.InputBegan:Connect(function(input, processed)
 
     if input.UserInputType == Enum.UserInputType.Keyboard then
         if input.KeyCode == Enum.KeyCode.One then
-            requestEquip("AK47")
+            requestEquipSlot("Primary")
         elseif input.KeyCode == Enum.KeyCode.Two then
-            requestEquip("OtherWeapon")
+            requestEquipSlot("Secondary")
+        elseif input.KeyCode == Enum.KeyCode.Three then
+            requestEquipSlot("Knife")
         end
     elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if getStat("Type") == "Melee" then return end -- knife attack not implemented yet
+
         firing = true
         fireBullet()
-        local rate = getStat("FireRate") or 0.12
-        while firing do
-            task.wait(rate)
-            if not firing then break end
-            fireBullet()
+        if getStat("Auto") then
+            local rate = getStat("FireRate") or 0.12
+            while firing do
+                task.wait(rate)
+                if not firing then break end
+                fireBullet()
+            end
         end
     end
 end)
