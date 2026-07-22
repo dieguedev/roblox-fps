@@ -8,6 +8,7 @@ local WeaponAttachment = require(script.Parent:WaitForChild("WeaponAttachment"))
 local EquipWeaponEvent = ReplicatedStorage:WaitForChild("EquipWeaponEvent")
 local FireWeaponEvent = ReplicatedStorage:WaitForChild("FireWeaponEvent")
 local WeaponEffectsEvent = ReplicatedStorage:WaitForChild("WeaponEffectsEvent")
+local ReloadWeaponEvent = ReplicatedStorage:WaitForChild("ReloadWeaponEvent")
 
 local loadoutStore = DataStoreService:GetDataStore("PlayerLoadout_v1")
 
@@ -24,6 +25,14 @@ local loadouts = {}
 local activeSlot = {}
 local equippedWeapon = {}
 local lastFireTime = {}
+
+-- Ammo, like the loadout, is server-owned: ammoState[player][weaponName] = {mag=, reserve=}.
+-- Keyed by weapon (not by slot) so ammo persists correctly if a slot's weapon
+-- ever changes. Not saved to DataStore on purpose — full ammo on next session
+-- is the expected behavior, same as most shooters.
+local ammoState = {}
+local isReloading = {}
+local reloadToken = {} -- bumped on every equip/respawn/new reload so stale task.delay callbacks no-op
 
 local MAX_ORIGIN_DISTANCE = 10 -- studs; how far camOrigin may be from the player's head before we distrust it
 local FIRE_RATE_TOLERANCE = 0.85 -- allow shots slightly faster than FireRate to absorb network jitter
@@ -51,14 +60,85 @@ local function sanitizeLoadout(rawLoadout)
     return loadout
 end
 
+local function resetAmmoForWeapon(player, weaponName)
+    local cfg = WeaponConfig[weaponName]
+    if not cfg or cfg.Type ~= "Ranged" then return end
+    ammoState[player] = ammoState[player] or {}
+    ammoState[player][weaponName] = {mag = cfg.MagazineSize, reserve = cfg.ReserveAmmo}
+end
+
+local function getAmmo(player, weaponName)
+    local cfg = WeaponConfig[weaponName]
+    if not cfg or cfg.Type ~= "Ranged" then return nil end
+    ammoState[player] = ammoState[player] or {}
+    if not ammoState[player][weaponName] then
+        resetAmmoForWeapon(player, weaponName)
+    end
+    return ammoState[player][weaponName]
+end
+
+-- Attributes are how the client (HUD + fire-gating) reads ammo: cheap, and it
+-- automatically only ever reflects what the server decided, same pattern as
+-- EquippedWeapon.
+local function updateAmmoAttributes(player)
+    local weaponName = equippedWeapon[player]
+    local ammo = weaponName and getAmmo(player, weaponName)
+    if ammo then
+        player:SetAttribute("AmmoInMag", ammo.mag)
+        player:SetAttribute("AmmoReserve", ammo.reserve)
+    else
+        player:SetAttribute("AmmoInMag", nil)
+        player:SetAttribute("AmmoReserve", nil)
+    end
+end
+
+local function cancelReload(player)
+    reloadToken[player] = (reloadToken[player] or 0) + 1
+    isReloading[player] = false
+    player:SetAttribute("Reloading", false)
+end
+
+local function startReload(player)
+    if isReloading[player] then return end
+    local weaponName = equippedWeapon[player]
+    local cfg = weaponName and WeaponConfig[weaponName]
+    if not cfg or cfg.Type ~= "Ranged" then return end
+
+    local ammo = getAmmo(player, weaponName)
+    if not ammo or ammo.mag >= cfg.MagazineSize or ammo.reserve <= 0 then return end
+
+    isReloading[player] = true
+    reloadToken[player] = (reloadToken[player] or 0) + 1
+    local myToken = reloadToken[player]
+    player:SetAttribute("Reloading", true)
+
+    task.delay(cfg.ReloadTime, function()
+        -- Bail out if the player left, switched weapons, or started another
+        -- reload while this one was in flight (token no longer matches).
+        if reloadToken[player] ~= myToken then return end
+        if not ammoState[player] or equippedWeapon[player] ~= weaponName then return end
+
+        local needed = cfg.MagazineSize - ammo.mag
+        local take = math.min(needed, ammo.reserve)
+        ammo.mag += take
+        ammo.reserve -= take
+
+        isReloading[player] = false
+        player:SetAttribute("Reloading", false)
+        updateAmmoAttributes(player)
+    end)
+end
+
 local function equipSlot(player, slotName)
     local loadout = loadouts[player]
     if not loadout then return end
     local weaponName = loadout[slotName]
     if not weaponName then return end -- slot locked/empty for this player
+    cancelReload(player)
     activeSlot[player] = slotName
     equippedWeapon[player] = weaponName
     player:SetAttribute("EquippedWeapon", weaponName)
+    updateAmmoAttributes(player)
     if player.Character then
         WeaponAttachment.equip(player.Character, weaponName)
     end
@@ -83,10 +163,20 @@ local function loadPlayerData(player)
     equipSlot(player, savedActiveSlot)
 
     -- Re-attach the visible weapon model on every respawn (a fresh character
-    -- has no weapon welded to it yet).
+    -- has no weapon welded to it yet), and refill ammo for every ranged weapon
+    -- in the loadout — a fresh life starts with full mags, same as most shooters.
     player.CharacterAdded:Connect(function(character)
+        cancelReload(player)
+        for _, weaponName in loadouts[player] do
+            resetAmmoForWeapon(player, weaponName)
+        end
+        updateAmmoAttributes(player)
         WeaponAttachment.equip(character, equippedWeapon[player])
     end)
+    for _, weaponName in loadouts[player] do
+        resetAmmoForWeapon(player, weaponName)
+    end
+    updateAmmoAttributes(player)
     if player.Character then
         WeaponAttachment.equip(player.Character, equippedWeapon[player])
     end
@@ -113,6 +203,9 @@ Players.PlayerRemoving:Connect(function(player)
     activeSlot[player] = nil
     equippedWeapon[player] = nil
     lastFireTime[player] = nil
+    ammoState[player] = nil
+    isReloading[player] = nil
+    reloadToken[player] = nil
 end)
 
 game:BindToClose(function()
@@ -130,10 +223,18 @@ EquipWeaponEvent.OnServerEvent:Connect(function(player, slotName)
     equipSlot(player, slotName)
 end)
 
+ReloadWeaponEvent.OnServerEvent:Connect(function(player)
+    startReload(player)
+end)
+
 FireWeaponEvent.OnServerEvent:Connect(function(player, camOrigin, camDir)
     local weaponName = equippedWeapon[player]
     local cfg = weaponName and WeaponConfig[weaponName]
     if not cfg or cfg.Type == "Melee" then
+        return
+    end
+
+    if isReloading[player] then
         return
     end
 
@@ -166,7 +267,17 @@ FireWeaponEvent.OnServerEvent:Connect(function(player, camOrigin, camDir)
         return
     end
 
+    -- No ammo, no shot. Consumes a bullet regardless of hit/miss, same as the
+    -- rate limit above only applies to shots that get this far (a rejected
+    -- shot shouldn't cost ammo).
+    local ammo = getAmmo(player, weaponName)
+    if not ammo or ammo.mag <= 0 then
+        return
+    end
+
     lastFireTime[player] = now
+    ammo.mag -= 1
+    updateAmmoAttributes(player)
 
     -- Never trust the client's reported hit Instance/Position: redo the raycast on the server.
     local range = cfg.BulletRange or 500

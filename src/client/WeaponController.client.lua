@@ -11,6 +11,7 @@ local WeaponConfig = require(ReplicatedStorage:WaitForChild("WeaponConfig"))
 local EquipWeaponEvent = ReplicatedStorage:WaitForChild("EquipWeaponEvent")
 local FireWeaponEvent = ReplicatedStorage:WaitForChild("FireWeaponEvent")
 local WeaponEffectsEvent = ReplicatedStorage:WaitForChild("WeaponEffectsEvent")
+local ReloadWeaponEvent = ReplicatedStorage:WaitForChild("ReloadWeaponEvent")
 
 local WEAPON_MODEL_NAME = "EquippedWeaponModel"
 
@@ -26,6 +27,15 @@ end
 
 local function requestEquipSlot(slotName)
     EquipWeaponEvent:FireServer(slotName)
+end
+
+-- Ammo/reload state lives on the server (AmmoInMag/AmmoReserve/Reloading
+-- attributes on LocalPlayer, same pattern as EquippedWeapon) — this script
+-- only reads it, to decide locally whether it's even worth asking to fire.
+local function requestReload()
+    if getStat("Type") == "Melee" then return end
+    if LocalPlayer:GetAttribute("Reloading") then return end -- avoid spamming the server every held-trigger tick
+    ReloadWeaponEvent:FireServer()
 end
 
 -- ============================================================
@@ -129,6 +139,9 @@ end
 
 local function fireBullet()
     if not canFire then return end
+    if LocalPlayer:GetAttribute("Reloading") then return end
+    local ammoInMag = LocalPlayer:GetAttribute("AmmoInMag")
+    if ammoInMag ~= nil and ammoInMag <= 0 then return end -- server enforces this too; this just avoids a wasted trip
     canFire = false
 
     local fireRate = getStat("FireRate") or 0.12
@@ -169,6 +182,19 @@ local function fireBullet()
     task.delay(fireRate, function()
         canFire = true
     end)
+end
+
+-- Wraps fireBullet with the "trigger pulled on an empty mag" case: rather than
+-- doing nothing, auto-request a reload (standard shooter QoL).
+local function attemptFire()
+    if getStat("Type") == "Melee" then return end
+    if LocalPlayer:GetAttribute("Reloading") then return end
+    local ammoInMag = LocalPlayer:GetAttribute("AmmoInMag")
+    if ammoInMag ~= nil and ammoInMag <= 0 then
+        requestReload()
+        return
+    end
+    fireBullet()
 end
 
 -- ============================================================
@@ -459,18 +485,20 @@ UserInputService.InputBegan:Connect(function(input, processed)
             requestEquipSlot("Secondary")
         elseif input.KeyCode == Enum.KeyCode.Three then
             requestEquipSlot("Knife")
+        elseif input.KeyCode == Enum.KeyCode.R then
+            requestReload()
         end
     elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
         if getStat("Type") == "Melee" then return end -- knife attack not implemented yet
 
         firing = true
-        fireBullet()
+        attemptFire()
         if getStat("Auto") then
             local rate = getStat("FireRate") or 0.12
             while firing do
                 task.wait(rate)
                 if not firing then break end
-                fireBullet()
+                attemptFire()
             end
         end
     end

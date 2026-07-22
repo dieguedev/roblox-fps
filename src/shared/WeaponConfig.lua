@@ -10,6 +10,10 @@ local WeaponConfig = {
         TracerThickness = 0.15,
         TracerLifetime = 0.08,
         Auto = true,
+        MagazineSize = 30,
+        ReserveAmmo = 90,
+        ReloadTime = 2.5, -- seconds; real AK mag-change is ~2.5-3.5s, this is on the fast end for pacing
+
         -- Third-person hold pose, relative to HumanoidRootPart (tuned visually
         -- against WeaponTestDummy in Studio; the gun mesh isn't hand-rigged,
         -- so this is a fixed offset rather than a real grip/IK attachment).
@@ -26,6 +30,9 @@ local WeaponConfig = {
         TracerThickness = 0.1,
         TracerLifetime = 0.06,
         Auto = false,
+        MagazineSize = 15,
+        ReserveAmmo = 60,
+        ReloadTime = 1.6,
     },
     Knife = {
         -- Melee slot, no attack implemented yet (equip-only placeholder).

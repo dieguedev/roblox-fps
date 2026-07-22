@@ -17,6 +17,9 @@
       },
       "WeaponEffectsEvent": {
         "$className": "RemoteEvent"
+      },
+      "ReloadWeaponEvent": {
+        "$className": "RemoteEvent"
       }
     },
 
@@ -41,6 +44,9 @@
         },
         "HideCursorAndShowCrosshair": {
           "$path": "src/client/HideCursorAndShowCrosshair.client.lua"
+        },
+        "AmmoUI": {
+          "$path": "src/client/AmmoUI.client.lua"
         }
       }
     }
