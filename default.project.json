@@ -14,6 +14,9 @@
       },
       "EquipWeaponEvent": {
         "$className": "RemoteEvent"
+      },
+      "WeaponEffectsEvent": {
+        "$className": "RemoteEvent"
       }
     },
 
@@ -22,6 +25,9 @@
       "$ignoreUnknownInstances": true,
       "WeaponService": {
         "$path": "src/server/WeaponService.server.lua"
+      },
+      "WeaponAttachment": {
+        "$path": "src/server/WeaponAttachment.lua"
       }
     },
 

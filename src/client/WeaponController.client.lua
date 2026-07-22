@@ -10,6 +10,9 @@ local Camera = Workspace.CurrentCamera
 local WeaponConfig = require(ReplicatedStorage:WaitForChild("WeaponConfig"))
 local EquipWeaponEvent = ReplicatedStorage:WaitForChild("EquipWeaponEvent")
 local FireWeaponEvent = ReplicatedStorage:WaitForChild("FireWeaponEvent")
+local WeaponEffectsEvent = ReplicatedStorage:WaitForChild("WeaponEffectsEvent")
+
+local WEAPON_MODEL_NAME = "EquippedWeaponModel"
 
 -- Single source of truth for "what weapon is equipped": the server-owned
 -- EquippedWeapon attribute. This script only reads it; changes are requested
@@ -59,10 +62,11 @@ local function getMuzzlePart(model)
     return best
 end
 
-local function createTracer(startPos, endPos)
-    local color = getStat("TracerColor") or Color3.fromRGB(255, 220, 80)
-    local thickness = getStat("TracerThickness") or 0.15
-    local life = getStat("TracerLifetime") or 0.08
+local function createTracer(startPos, endPos, weaponName)
+    local cfg = WeaponConfig[weaponName or currentWeapon]
+    local color = (cfg and cfg.TracerColor) or Color3.fromRGB(255, 220, 80)
+    local thickness = (cfg and cfg.TracerThickness) or 0.15
+    local life = (cfg and cfg.TracerLifetime) or 0.08
     local dist = (endPos - startPos).Magnitude
     if dist < 0.1 then return end
 
@@ -349,6 +353,50 @@ local function setupViewmodel()
 end
 
 -- ============================================================
+-- Third-person weapon model: the server welds a real "EquippedWeaponModel"
+-- onto every character (WeaponAttachment), so it physically follows
+-- HumanoidRootPart on its own and is visible to everyone without any
+-- per-frame reposition script. We only need to hide our own copy locally
+-- (we already see the first-person viewmodel instead) — Transparency
+-- changes made from a LocalScript never replicate to other clients, so
+-- this only affects what we see.
+-- ============================================================
+
+local function hideWeaponModel(model)
+    for _, part in model:GetDescendants() do
+        if part:IsA("BasePart") then
+            part.Transparency = 1
+        end
+    end
+end
+
+local function watchOwnWeaponModel(character)
+    local existing = character:FindFirstChild(WEAPON_MODEL_NAME)
+    if existing then
+        hideWeaponModel(existing)
+    end
+    character.ChildAdded:Connect(function(child)
+        if child.Name == WEAPON_MODEL_NAME then
+            hideWeaponModel(child)
+        end
+    end)
+end
+
+-- Other players' shots: the shooter already drew their own tracer/flash locally.
+WeaponEffectsEvent.OnClientEvent:Connect(function(shooter, origin, hitPos)
+    if shooter == LocalPlayer then return end
+    local weaponName = shooter:GetAttribute("EquippedWeapon")
+    local muzzlePos = origin
+    local character = shooter.Character
+    local model = character and character:FindFirstChild(WEAPON_MODEL_NAME)
+    if model then
+        muzzlePos = model:GetPivot().Position
+    end
+    createTracer(muzzlePos, hitPos, weaponName)
+    createMuzzleFlash(muzzlePos, CFrame.lookAt(muzzlePos, hitPos))
+end)
+
+-- ============================================================
 -- Character lifecycle
 -- ============================================================
 
@@ -362,6 +410,7 @@ local function onCharacterAdded(character)
     forceFirstPerson()
     setRealArmsInvisible(character)
     setupViewmodel()
+    watchOwnWeaponModel(character)
 
     local humanoid = character:WaitForChild("Humanoid")
     humanoid.Died:Connect(function()

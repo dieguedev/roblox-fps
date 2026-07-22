@@ -10,6 +10,10 @@ local WeaponConfig = {
         TracerThickness = 0.15,
         TracerLifetime = 0.08,
         Auto = true,
+        -- Third-person hold pose, relative to HumanoidRootPart (tuned visually
+        -- against WeaponTestDummy in Studio; the gun mesh isn't hand-rigged,
+        -- so this is a fixed offset rather than a real grip/IK attachment).
+        HeldOffset = CFrame.new(0.8, -0.3, -1.0) * CFrame.Angles(0, math.rad(90), 0),
     },
     Pistol = {
         Slot = "Secondary",

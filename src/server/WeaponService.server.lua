@@ -4,8 +4,10 @@ local Workspace = game:GetService("Workspace")
 local DataStoreService = game:GetService("DataStoreService")
 
 local WeaponConfig = require(ReplicatedStorage:WaitForChild("WeaponConfig"))
+local WeaponAttachment = require(script.Parent:WaitForChild("WeaponAttachment"))
 local EquipWeaponEvent = ReplicatedStorage:WaitForChild("EquipWeaponEvent")
 local FireWeaponEvent = ReplicatedStorage:WaitForChild("FireWeaponEvent")
+local WeaponEffectsEvent = ReplicatedStorage:WaitForChild("WeaponEffectsEvent")
 
 local loadoutStore = DataStoreService:GetDataStore("PlayerLoadout_v1")
 
@@ -36,7 +38,10 @@ end
 local function sanitizeLoadout(rawLoadout)
     local loadout = {}
     for _, slotName in SLOTS do
-        local weaponName = typeof(rawLoadout) == "table" and rawLoadout[slotName]
+        local weaponName = nil
+        if typeof(rawLoadout) == "table" then
+            weaponName = rawLoadout[slotName]
+        end
         if isValidForSlot(weaponName, slotName) then
             loadout[slotName] = weaponName
         else
@@ -54,6 +59,9 @@ local function equipSlot(player, slotName)
     activeSlot[player] = slotName
     equippedWeapon[player] = weaponName
     player:SetAttribute("EquippedWeapon", weaponName)
+    if player.Character then
+        WeaponAttachment.equip(player.Character, weaponName)
+    end
 end
 
 local function loadPlayerData(player)
@@ -73,6 +81,15 @@ local function loadPlayerData(player)
         savedActiveSlot = DEFAULT_ACTIVE_SLOT
     end
     equipSlot(player, savedActiveSlot)
+
+    -- Re-attach the visible weapon model on every respawn (a fresh character
+    -- has no weapon welded to it yet).
+    player.CharacterAdded:Connect(function(character)
+        WeaponAttachment.equip(character, equippedWeapon[player])
+    end)
+    if player.Character then
+        WeaponAttachment.equip(player.Character, equippedWeapon[player])
+    end
 end
 
 local function savePlayerData(player)
@@ -165,6 +182,12 @@ FireWeaponEvent.OnServerEvent:Connect(function(player, camOrigin, camDir)
     rayParams.FilterDescendantsInstances = {character}
 
     local result = Workspace:Raycast(camOrigin, direction, rayParams)
+    local hitPos = result and result.Position or (camOrigin + direction)
+
+    -- Broadcast so every other client can draw a tracer/muzzle flash for this shot —
+    -- the shooter already drew their own locally, for zero-latency feedback.
+    WeaponEffectsEvent:FireAllClients(player, camOrigin, hitPos)
+
     if not result then
         return
     end
