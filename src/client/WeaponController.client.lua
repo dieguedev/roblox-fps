@@ -18,7 +18,7 @@ local WEAPON_MODEL_NAME = "EquippedWeaponModel"
 -- Single source of truth for "what weapon is equipped": the server-owned
 -- EquippedWeapon attribute. This script only reads it; changes are requested
 -- via EquipWeaponEvent and applied here once the server confirms them back.
-local currentWeapon = LocalPlayer:GetAttribute("EquippedWeapon") or "Pistol"
+local currentWeapon = LocalPlayer:GetAttribute("EquippedWeapon") or "AK47"
 
 local function getStat(stat)
     local cfg = WeaponConfig[currentWeapon]
@@ -220,57 +220,6 @@ local function setRealArmsInvisible(character)
     if rightArm then rightArm.Transparency = 1 end
 end
 
-local function copyArmAppearance(character, viewmodel)
-    if not character or not viewmodel then return end
-
-    local playerLeft = character:FindFirstChild("LeftUpperArm") or character:FindFirstChild("Left Arm")
-    local playerRight = character:FindFirstChild("RightUpperArm") or character:FindFirstChild("Right Arm")
-
-    local vmLeft = viewmodel:FindFirstChild("LeftArm")
-    local vmRight = viewmodel:FindFirstChild("RightArm")
-
-    if playerLeft and vmLeft and playerLeft:IsA("MeshPart") and vmLeft:IsA("MeshPart") then
-        vmLeft.TextureID = playerLeft.TextureID
-        vmLeft.Color = playerLeft.Color
-        vmLeft.Material = playerLeft.Material
-    end
-    if playerRight and vmRight and playerRight:IsA("MeshPart") and vmRight:IsA("MeshPart") then
-        vmRight.TextureID = playerRight.TextureID
-        vmRight.Color = playerRight.Color
-        vmRight.Material = playerRight.Material
-    end
-
-    local shirt = character:FindFirstChildOfClass("Shirt")
-    if shirt and shirt.ShirtTemplate and shirt.ShirtTemplate ~= "" then
-        local function applyShirtTexture(arm)
-            if arm and arm:IsA("MeshPart") then
-                local decal = arm:FindFirstChild("ShirtDecal")
-                if not decal then
-                    decal = Instance.new("Decal")
-                    decal.Name = "ShirtDecal"
-                    decal.Face = Enum.NormalId.Front
-                    decal.Parent = arm
-                end
-                decal.Texture = shirt.ShirtTemplate
-                decal.Transparency = 0
-            end
-        end
-        applyShirtTexture(vmLeft)
-        applyShirtTexture(vmRight)
-    else
-        local function removeShirtDecal(arm)
-            if arm and arm:IsA("MeshPart") then
-                local decal = arm:FindFirstChild("ShirtDecal")
-                if decal then
-                    decal:Destroy()
-                end
-            end
-        end
-        removeShirtDecal(vmLeft)
-        removeShirtDecal(vmRight)
-    end
-end
-
 local viewmodel = nil
 local renderConn = nil
 
@@ -315,8 +264,6 @@ local function setupViewmodel()
     if not weaponTemplate then return end
     viewmodel = weaponTemplate:Clone()
     viewmodel.Parent = Camera
-
-    copyArmAppearance(LocalPlayer.Character, viewmodel)
 
     for _, part in viewmodel:GetDescendants() do
         if part:IsA("BasePart") then

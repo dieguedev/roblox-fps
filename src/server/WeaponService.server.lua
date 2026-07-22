@@ -16,7 +16,7 @@ local SLOTS = {"Primary", "Secondary", "Knife"}
 -- Every player starts owning these three; a future shop grants better weapons
 -- per slot (e.g. Primary = "SCAR-L") and that assignment gets persisted the same way.
 local DEFAULT_LOADOUT = {Primary = "AK47", Secondary = "Pistol", Knife = "Knife"}
-local DEFAULT_ACTIVE_SLOT = "Secondary"
+local DEFAULT_ACTIVE_SLOT = "Primary"
 
 -- Server-owned source of truth: which weapon each player has assigned to each
 -- slot, which slot they're currently holding, and when they last fired a valid
