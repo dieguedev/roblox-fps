@@ -49,6 +49,36 @@
           "$path": "src/client/AmmoUI.client.lua"
         }
       }
+    },
+
+    "Workspace": {
+      "$className": "Workspace",
+      "$ignoreUnknownInstances": true,
+      "WeaponTestDummy": {
+        "$className": "Model",
+        "$ignoreUnknownInstances": true,
+        "RespawnScript": {
+          "$path": "src/server/dummy/RespawnScript.server.lua"
+        },
+        "PatrolScript": {
+          "$path": "src/server/dummy/PatrolScript.server.lua"
+        },
+        "HealthBarScript": {
+          "$path": "src/server/dummy/HealthBarScript.server.lua"
+        }
+      }
+    },
+
+    "StarterGui": {
+      "$className": "StarterGui",
+      "$ignoreUnknownInstances": true,
+      "Basic Health GUI": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "HealthBarClient": {
+          "$path": "src/client/HealthBarClient.client.lua"
+        }
+      }
     }
   }
 }
