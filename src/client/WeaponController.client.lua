@@ -275,9 +275,16 @@ local function setupViewmodel()
 
     lastCameraCFrame = Camera.CFrame
     swayOffset = CFrame.new()
+    -- Per-weapon nudge on top of the shared base offset: the raw templates in
+    -- ReplicatedStorage.Weapons aren't built with the gun at a consistent
+    -- distance from the fake arms, so some weapons need pulling forward/back
+    -- to match the others (tuned visually, same as HeldOffset/IconRotation).
+    local weaponCfg = WeaponConfig[currentWeapon]
+    local viewmodelOffset = (weaponCfg and weaponCfg.ViewmodelOffset) or CFrame.new()
+
     renderConn = RunService.RenderStepped:Connect(function(dt)
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") then
-            local baseOffset = CFrame.new(0, -0.5, -0.25)
+            local baseOffset = CFrame.new(0, -0.5, -0.25) * viewmodelOffset
 
             local speed = getMovementSpeed()
             local moveThreshold = 0.5
