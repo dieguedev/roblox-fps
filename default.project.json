@@ -30,14 +30,8 @@
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
         "$ignoreUnknownInstances": true,
-        "ClientWeaponEquipAndFire": {
-          "$path": "src/client/ClientWeaponEquipAndFire.client.lua"
-        },
-        "AK47FireWithTracers": {
-          "$path": "src/client/AK47FireWithTracers.client.lua"
-        },
-        "ShowArmsInFirstPerson": {
-          "$path": "src/client/ShowArmsInFirstPerson.client.lua"
+        "WeaponController": {
+          "$path": "src/client/WeaponController.client.lua"
         },
         "HideCursorAndShowCrosshair": {
           "$path": "src/client/HideCursorAndShowCrosshair.client.lua"
