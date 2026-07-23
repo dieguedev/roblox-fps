@@ -12,6 +12,8 @@ local EquipWeaponEvent = ReplicatedStorage:WaitForChild("EquipWeaponEvent")
 local FireWeaponEvent = ReplicatedStorage:WaitForChild("FireWeaponEvent")
 local WeaponEffectsEvent = ReplicatedStorage:WaitForChild("WeaponEffectsEvent")
 local ReloadWeaponEvent = ReplicatedStorage:WaitForChild("ReloadWeaponEvent")
+local HitmarkerEvent = ReplicatedStorage:WaitForChild("HitmarkerEvent")
+local DamageNumberEvent = ReplicatedStorage:WaitForChild("DamageNumberEvent")
 
 local WEAPON_MODEL_NAME = "EquippedWeaponModel"
 
@@ -44,6 +46,7 @@ end
 
 local canFire = true
 local firing = false
+local pendingFire = false -- buffers a single "clicked too early" shot to fire the instant the cooldown clears
 
 local function getViewmodel()
     for _, child in Camera:GetChildren() do
@@ -137,12 +140,246 @@ local function createMuzzleFlash(pos, cframe)
     end)
 end
 
+-- ============================================================
+-- Hitmarker: plays a confirmation sound on a confirmed server hit,
+-- with a distinct sound (and a screen-centered spark burst) for headshots.
+-- ============================================================
+
+local hitmarkerSound = ReplicatedStorage:FindFirstChild("HitmarkerSound")
+local hitmarkerHeadshotSound = ReplicatedStorage:FindFirstChild("HitmarkerHeadshotSound")
+
+local hitmarkerGui = Instance.new("ScreenGui")
+hitmarkerGui.Name = "HitmarkerGui"
+hitmarkerGui.ResetOnSpawn = false
+hitmarkerGui.IgnoreGuiInset = true
+
+local function addGui()
+    if LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") then
+        hitmarkerGui.Parent = LocalPlayer.PlayerGui
+    end
+end
+addGui()
+LocalPlayer.PlayerGui.ChildAdded:Connect(function(child)
+    if child.Name == "HitmarkerGui" then return end
+    addGui()
+end)
+
+-- Headshot spark burst: a handful of thin streaks fired outward from screen
+-- center, then fade out. Reuses no state between bursts, so overlapping
+-- headshots just add more particles instead of interrupting each other.
+local SPARK_COUNT = 8
+local SPARK_LENGTH = 14
+local SPARK_THICKNESS = 2
+local SPARK_TRAVEL = 26
+local SPARK_DURATION = 0.25
+
+local function spawnHeadshotSpark()
+    for i = 1, SPARK_COUNT do
+        local angle = (i / SPARK_COUNT) * math.pi * 2 + math.random() * 0.3
+
+        local spark = Instance.new("Frame")
+        spark.AnchorPoint = Vector2.new(0.5, 0.5)
+        spark.Position = UDim2.new(0.5, 0, 0.5, 0)
+        spark.Size = UDim2.new(0, SPARK_LENGTH, 0, SPARK_THICKNESS)
+        spark.Rotation = math.deg(angle)
+        spark.BackgroundColor3 = Color3.fromRGB(255, 200, 80)
+        spark.BorderSizePixel = 0
+        spark.Parent = hitmarkerGui
+
+        local startTime = os.clock()
+        local dx, dy = math.cos(angle), math.sin(angle)
+        local conn
+        conn = RunService.Heartbeat:Connect(function()
+            local alpha = math.clamp((os.clock() - startTime) / SPARK_DURATION, 0, 1)
+            local dist = SPARK_TRAVEL * alpha
+            spark.Position = UDim2.new(0.5, dx * dist, 0.5, dy * dist)
+            spark.BackgroundTransparency = alpha
+            if alpha >= 1 then
+                conn:Disconnect()
+                spark:Destroy()
+            end
+        end)
+    end
+end
+
+local function showHitmarker(isHeadshot)
+    if isHeadshot then
+        spawnHeadshotSpark()
+    end
+
+    local soundTemplate = (isHeadshot and hitmarkerHeadshotSound) or hitmarkerSound
+    if soundTemplate then
+        local sound = soundTemplate:Clone()
+        sound.Parent = hitmarkerGui
+        sound.Ended:Connect(function() sound:Destroy() end)
+        sound:Play()
+    end
+end
+
+HitmarkerEvent.OnClientEvent:Connect(function(isHeadshot)
+    showHitmarker(isHeadshot)
+end)
+
+-- ============================================================
+-- Damage numbers: accumulates repeated hits on the same target into one
+-- floating number above its head. Pops in with a slight sideways arc
+-- (rather than shooting straight up), then once hits stop landing it
+-- falls away and fades out.
+-- ============================================================
+
+local DAMAGE_NUMBER_HOLD_TIME = 0.6 -- seconds without a new hit before it starts falling
+local DAMAGE_NUMBER_ENTRY_TIME = 0.18
+local DAMAGE_NUMBER_FALL_TIME = 0.6
+local DAMAGE_NUMBER_RISE_HEIGHT = 2.2 -- studs, how high it settles above its base offset
+local DAMAGE_NUMBER_FALL_DISTANCE = 3 -- studs, how far it drops while fading out
+
+local activeDamageNumbers = {} -- [targetModel] = state
+
+local function getTargetHead(targetModel)
+    return targetModel:FindFirstChild("Head") or targetModel:FindFirstChildWhichIsA("BasePart")
+end
+
+local function animateDamageNumberFall(state, myToken)
+    state.falling = true
+    local startTime = os.clock()
+    local conn
+    conn = RunService.Heartbeat:Connect(function()
+        if state.token ~= myToken then
+            conn:Disconnect()
+            return
+        end
+        local alpha = math.clamp((os.clock() - startTime) / DAMAGE_NUMBER_FALL_TIME, 0, 1)
+        local eased = alpha * alpha -- accelerating fall, like gravity
+        state.billboard.StudsOffset = state.restOffset + Vector3.new(state.sideDrift * alpha * 0.6, -DAMAGE_NUMBER_FALL_DISTANCE * eased, 0)
+        state.label.TextTransparency = alpha
+        state.stroke.Transparency = alpha
+        if alpha >= 1 then
+            conn:Disconnect()
+            state.billboard:Destroy()
+            if activeDamageNumbers[state.target] == state then
+                activeDamageNumbers[state.target] = nil
+            end
+        end
+    end)
+end
+
+-- Rises with an ease-out curve while drifting sideways at a steady rate:
+-- the two combined trace an arc instead of a straight vertical line.
+local function animateDamageNumberEntry(state)
+    local startTime = os.clock()
+    local conn
+    conn = RunService.Heartbeat:Connect(function()
+        if not state.billboard.Parent then
+            conn:Disconnect()
+            return
+        end
+        local alpha = math.clamp((os.clock() - startTime) / DAMAGE_NUMBER_ENTRY_TIME, 0, 1)
+        local rise = DAMAGE_NUMBER_RISE_HEIGHT * (1 - (1 - alpha) * (1 - alpha))
+        state.billboard.StudsOffset = state.baseOffset + Vector3.new(state.sideDrift * alpha, rise, 0)
+        if alpha >= 1 then
+            conn:Disconnect()
+            state.restOffset = state.baseOffset + Vector3.new(state.sideDrift, DAMAGE_NUMBER_RISE_HEIGHT, 0)
+        end
+    end)
+end
+
+local function scheduleDamageNumberFall(state)
+    state.token += 1
+    local myToken = state.token
+    task.delay(DAMAGE_NUMBER_HOLD_TIME, function()
+        if state.token ~= myToken then return end -- another hit landed since this was scheduled
+        animateDamageNumberFall(state, myToken)
+    end)
+end
+
+local function showDamageNumber(targetModel, damage, isHeadshot)
+    local head = getTargetHead(targetModel)
+    if not head then return end
+
+    local state = activeDamageNumbers[targetModel]
+    if not state then
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "DamageNumber"
+        billboard.Adornee = head
+        billboard.AlwaysOnTop = true
+        billboard.LightInfluence = 0
+        billboard.Size = UDim2.new(0, 140, 0, 60)
+        billboard.StudsOffset = Vector3.new(0, 1, 0)
+
+        local label = Instance.new("TextLabel")
+        label.Name = "DamageLabel"
+        label.BackgroundTransparency = 1
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.Font = Enum.Font.SourceSansBold
+        label.TextScaled = true
+        label.Text = ""
+        label.Parent = billboard
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Thickness = 4
+        stroke.LineJoinMode = Enum.LineJoinMode.Round
+        stroke.Parent = label
+
+        billboard.Parent = head
+
+        state = {
+            target = targetModel,
+            billboard = billboard,
+            label = label,
+            stroke = stroke,
+            accumulated = 0,
+            token = 0,
+            falling = false,
+            baseOffset = Vector3.new(0, 1, 0),
+            sideDrift = (math.random() * 2 - 1) * 1.2,
+        }
+        activeDamageNumbers[targetModel] = state
+        animateDamageNumberEntry(state)
+
+        targetModel.Destroying:Connect(function()
+            if activeDamageNumbers[targetModel] == state then
+                activeDamageNumbers[targetModel] = nil
+            end
+        end)
+    elseif state.falling then
+        -- A new hit landed mid fall-away: snap back to resting height and reset the fade.
+        state.falling = false
+        state.label.TextTransparency = 0
+        state.stroke.Transparency = 0
+        state.billboard.StudsOffset = state.restOffset or state.baseOffset
+    end
+
+    state.accumulated += damage
+    state.label.Text = tostring(math.floor(state.accumulated + 0.5))
+
+    if isHeadshot then
+        state.label.TextColor3 = Color3.fromRGB(255, 60, 60)
+        state.stroke.Color = Color3.fromRGB(90, 0, 0)
+    else
+        state.label.TextColor3 = Color3.new(1, 1, 1)
+        state.stroke.Color = Color3.new(0, 0, 0)
+    end
+
+    scheduleDamageNumberFall(state)
+end
+
+DamageNumberEvent.OnClientEvent:Connect(function(targetModel, damage, isHeadshot)
+    if typeof(targetModel) ~= "Instance" or not targetModel:IsDescendantOf(Workspace) then return end
+    showDamageNumber(targetModel, damage, isHeadshot)
+end)
+
+local attemptFire -- forward declaration: fireBullet's cooldown callback re-triggers a buffered shot through this
+
 local function fireBullet()
-    if not canFire then return end
+    if not canFire then
+        pendingFire = true -- click landed mid-cooldown; fire it as soon as we can instead of dropping it
+        return
+    end
     if LocalPlayer:GetAttribute("Reloading") then return end
     local ammoInMag = LocalPlayer:GetAttribute("AmmoInMag")
     if ammoInMag ~= nil and ammoInMag <= 0 then return end -- server enforces this too; this just avoids a wasted trip
     canFire = false
+    pendingFire = false
 
     local fireRate = getStat("FireRate") or 0.12
     local range = getStat("BulletRange") or 500
@@ -181,12 +418,16 @@ local function fireBullet()
 
     task.delay(fireRate, function()
         canFire = true
+        if pendingFire then
+            pendingFire = false
+            attemptFire()
+        end
     end)
 end
 
 -- Wraps fireBullet with the "trigger pulled on an empty mag" case: rather than
 -- doing nothing, auto-request a reload (standard shooter QoL).
-local function attemptFire()
+attemptFire = function()
     if getStat("Type") == "Melee" then return end
     if LocalPlayer:GetAttribute("Reloading") then return end
     local ammoInMag = LocalPlayer:GetAttribute("AmmoInMag")
@@ -410,6 +651,7 @@ local function onCharacterAdded(character)
     local humanoid = character:WaitForChild("Humanoid")
     humanoid.Died:Connect(function()
         firing = false
+        pendingFire = false
     end)
 end
 
@@ -423,6 +665,7 @@ end
 
 LocalPlayer.CharacterRemoving:Connect(function()
     firing = false
+    pendingFire = false
     removeViewmodel()
 end)
 
@@ -435,6 +678,7 @@ LocalPlayer:GetAttributeChangedSignal("EquippedWeapon"):Connect(function()
     local newWeapon = LocalPlayer:GetAttribute("EquippedWeapon")
     if typeof(newWeapon) == "string" and newWeapon ~= currentWeapon then
         currentWeapon = newWeapon
+        pendingFire = false -- don't let a shot buffered for the old weapon fire under the new one's stats
         setupViewmodel()
     end
 end)

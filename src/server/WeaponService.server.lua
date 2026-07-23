@@ -9,6 +9,8 @@ local EquipWeaponEvent = ReplicatedStorage:WaitForChild("EquipWeaponEvent")
 local FireWeaponEvent = ReplicatedStorage:WaitForChild("FireWeaponEvent")
 local WeaponEffectsEvent = ReplicatedStorage:WaitForChild("WeaponEffectsEvent")
 local ReloadWeaponEvent = ReplicatedStorage:WaitForChild("ReloadWeaponEvent")
+local HitmarkerEvent = ReplicatedStorage:WaitForChild("HitmarkerEvent")
+local DamageNumberEvent = ReplicatedStorage:WaitForChild("DamageNumberEvent")
 
 local loadoutStore = DataStoreService:GetDataStore("PlayerLoadout_v1")
 
@@ -306,10 +308,13 @@ FireWeaponEvent.OnServerEvent:Connect(function(player, camOrigin, camDir)
     local hitModel = result.Instance:FindFirstAncestorOfClass("Model")
     local hitHumanoid = hitModel and hitModel:FindFirstChildOfClass("Humanoid")
     if hitHumanoid and hitHumanoid ~= humanoid and hitHumanoid.Health > 0 then
+        local isHeadshot = result.Instance.Name == "Head"
         local damage = cfg.Damage or 0
-        if result.Instance.Name == "Head" then
+        if isHeadshot then
             damage *= cfg.HeadshotMultiplier or 1
         end
         hitHumanoid:TakeDamage(damage)
+        HitmarkerEvent:FireClient(player, isHeadshot)
+        DamageNumberEvent:FireClient(player, hitModel, damage, isHeadshot)
     end
 end)

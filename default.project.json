@@ -18,6 +18,12 @@
       "WeaponEffectsEvent": {
         "$className": "RemoteEvent"
       },
+      "HitmarkerEvent": {
+        "$className": "RemoteEvent"
+      },
+      "DamageNumberEvent": {
+        "$className": "RemoteEvent"
+      },
       "ReloadWeaponEvent": {
         "$className": "RemoteEvent"
       }
