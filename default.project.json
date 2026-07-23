@@ -48,6 +48,9 @@
         "WeaponController": {
           "$path": "src/client/WeaponController.client.lua"
         },
+        "MovementController": {
+          "$path": "src/client/MovementController.client.lua"
+        },
         "HideCursorAndShowCrosshair": {
           "$path": "src/client/HideCursorAndShowCrosshair.client.lua"
         },
