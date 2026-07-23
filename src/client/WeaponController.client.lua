@@ -140,6 +140,36 @@ local function createMuzzleFlash(pos, cframe)
     end)
 end
 
+-- Generic per-weapon gunshot sound: looks up a Sound named "<WeaponName>Shot"
+-- in ReplicatedStorage (e.g. "AK47Shot") so adding a new weapon's fire sound
+-- is just dropping in a Sound with the matching name — no code changes needed.
+-- Silently does nothing if that weapon has no shot sound yet.
+-- Played from a throwaway anchored part (rather than the hitmarker's flat
+-- ScreenGui) so it's positional 3D audio, consistent for both the shooter and
+-- anyone else nearby.
+local function playWeaponFireSound(weaponName, position)
+    local soundTemplate = ReplicatedStorage:FindFirstChild(weaponName .. "Shot")
+    if not soundTemplate then return end
+
+    local anchor = Instance.new("Part")
+    anchor.Name = "WeaponSoundEmitter"
+    anchor.Anchored = true
+    anchor.CanCollide = false
+    anchor.CanQuery = false
+    anchor.CanTouch = false
+    anchor.Transparency = 1
+    anchor.Size = Vector3.new(0.1, 0.1, 0.1)
+    anchor.Position = position
+    anchor.Parent = Workspace
+
+    local sound = soundTemplate:Clone()
+    sound.Parent = anchor
+    sound:Play()
+    sound.Ended:Connect(function()
+        anchor:Destroy()
+    end)
+end
+
 -- ============================================================
 -- Hitmarker: plays a confirmation sound on a confirmed server hit,
 -- with a distinct sound (and a screen-centered spark burst) for headshots.
@@ -413,6 +443,7 @@ local function fireBullet()
 
     createTracer(muzzlePos, hitPos)
     createMuzzleFlash(muzzlePos, muzzleCFrame)
+    playWeaponFireSound(currentWeapon, muzzlePos)
 
     FireWeaponEvent:FireServer(camOrigin, camDir)
 
@@ -630,6 +661,9 @@ WeaponEffectsEvent.OnClientEvent:Connect(function(shooter, origin, hitPos)
     end
     createTracer(muzzlePos, hitPos, weaponName)
     createMuzzleFlash(muzzlePos, CFrame.lookAt(muzzlePos, hitPos))
+    if weaponName then
+        playWeaponFireSound(weaponName, muzzlePos)
+    end
 end)
 
 -- ============================================================
