@@ -295,15 +295,30 @@ local function setupViewmodel()
             local bobAmplitudeX = 0.04 * bobIntensity
             local bobAmplitudeRot = 0.03 * bobIntensity
 
+            -- Idle "breathing" sway: same shape as the walk bob but much
+            -- slower/subtler, and it fades out as the walk bob fades in so
+            -- the two never fight each other.
+            local idleFrequency = 1.6
+            local idleAmplitudeY = 0.03
+            local idleAmplitudeX = 0.016
+            local idleAmplitudeRot = 0.016
+            local idleIntensity = 1 - bobIntensity
+
             local t = tick()
             local bobY = math.sin(t * bobFrequency) * bobAmplitudeY
             local bobX = math.cos(t * bobFrequency * 0.5) * bobAmplitudeX
             local bobRot = math.sin(t * bobFrequency * 0.5) * bobAmplitudeRot
 
+            local idleY = math.sin(t * idleFrequency) * idleAmplitudeY * idleIntensity
+            local idleX = math.cos(t * idleFrequency * 0.5) * idleAmplitudeX * idleIntensity
+            local idleRot = math.sin(t * idleFrequency * 0.5) * idleAmplitudeRot * idleIntensity
+
             local animatedOffset = baseOffset
 
             if speed > moveThreshold then
                 animatedOffset = animatedOffset * CFrame.new(bobX, bobY, 0) * CFrame.Angles(0, bobRot, 0)
+            else
+                animatedOffset = animatedOffset * CFrame.new(idleX, idleY, 0) * CFrame.Angles(0, idleRot, 0)
             end
 
             if lastCameraCFrame then

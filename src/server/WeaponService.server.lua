@@ -306,6 +306,10 @@ FireWeaponEvent.OnServerEvent:Connect(function(player, camOrigin, camDir)
     local hitModel = result.Instance:FindFirstAncestorOfClass("Model")
     local hitHumanoid = hitModel and hitModel:FindFirstChildOfClass("Humanoid")
     if hitHumanoid and hitHumanoid ~= humanoid and hitHumanoid.Health > 0 then
-        hitHumanoid:TakeDamage(cfg.Damage or 0)
+        local damage = cfg.Damage or 0
+        if result.Instance.Name == "Head" then
+            damage *= cfg.HeadshotMultiplier or 1
+        end
+        hitHumanoid:TakeDamage(damage)
     end
 end)

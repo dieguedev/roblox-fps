@@ -1,17 +1,3 @@
---[[
-	Hey if you're reading this HI!!
-	I made this model a few years ago. It wasn't really put together well but im surprised it got a lot of notice!
-
-	I went back (it's 2024) and made some small adjustments.
-
-	Other edit: OK. Final changes, it's 2025, my last changes were a bit rushed and do not use proper techniques
-	to updates the health bar UI. The UI now automatically updates when the player spawns in too. (Init)
-
-	I have also made the bar more vibrant than the dark green it was before.
-	Feel free to make any changes to the UI, whatever suits your game style best.
-
---]]
-
 -- Service Variables
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
