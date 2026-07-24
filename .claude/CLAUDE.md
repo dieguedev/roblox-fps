@@ -1,0 +1,1 @@
+- Nunca hagas pruebas tú en Roblox Studio, las pruebas las hago yo. Dame un desglose de qué tengo que probar con pasos claros y sencillos.
