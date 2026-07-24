@@ -16,9 +16,17 @@ CollectionService:AddTag(zombie, "Zombie")
 -- matches the "Normal" zombie baseline from Juego_Completo.md.
 humanoid.MaxHealth = 150
 humanoid.Health = 150
+-- A bit faster than the player's normal walk speed (16, see MovementController.client.lua)
+-- so it can actually close distance while you're just walking, but still
+-- slower than sprint (26) so sprinting away is a real option.
+humanoid.WalkSpeed = 18
 
-local REPATH_INTERVAL = 1 -- seconds between recompute checks
-local REPATH_DISTANCE = 6 -- studs the target must move since the last computed path before it's worth recomputing
+-- Checked frequently (not recomputed frequently -- see the idle/moved gate
+-- below); checking only once a second meant the zombie chased a snapshot of
+-- the player's position that was up to a full second stale, so it never
+-- actually closed the distance on a moving target.
+local REPATH_INTERVAL = 0.1 -- seconds between recompute *checks*
+local REPATH_DISTANCE = 5 -- studs the target must move since the last computed path before it's worth recomputing
 local CORPSE_CLEANUP_DELAY = 5 -- seconds the corpse stays before being removed, so kills don't pile up on the map
 
 -- AgentCanJump/AgentCanClimb let the zombie get over the map's obstacles instead
