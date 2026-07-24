@@ -197,7 +197,25 @@ local function savePlayerData(player)
     end)
 end
 
+-- Hats/hair sit in front of the real Head part and are raycastable by default,
+-- so a headshot ray hits the accessory's Handle first and never reports "Head".
+-- CharacterAppearanceLoaded (not CharacterAdded) guarantees accessories have
+-- actually finished loading before we touch them.
+local function disableAccessoryRaycasts(character)
+    for _, accessory in character:GetChildren() do
+        if accessory:IsA("Accessory") then
+            local handle = accessory:FindFirstChild("Handle")
+            if handle then
+                handle.CanQuery = false
+            end
+        end
+    end
+end
+
 Players.PlayerAdded:Connect(loadPlayerData)
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAppearanceLoaded:Connect(disableAccessoryRaycasts)
+end)
 
 Players.PlayerRemoving:Connect(function(player)
     savePlayerData(player)
