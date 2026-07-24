@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local CollectionService = game:GetService("CollectionService")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
@@ -75,6 +76,20 @@ local function getMuzzlePart(model)
         if d > bestDist then best, bestDist = p, d end
     end
     return best
+end
+
+-- Shared by fireBullet's tracer raycast and the mobile auto-fire target
+-- check below, so both always aim from exactly the same place (camera
+-- center, where the fixed crosshair sits) and ignore the same instances.
+local function buildFireRayParams()
+    local rayParams = RaycastParams.new()
+    rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+    local ignore = {Camera}
+    local viewmodel = getViewmodel()
+    if viewmodel then table.insert(ignore, viewmodel) end
+    if LocalPlayer.Character then table.insert(ignore, LocalPlayer.Character) end
+    rayParams.FilterDescendantsInstances = ignore
+    return rayParams
 end
 
 local function createTracer(startPos, endPos, weaponName)
@@ -437,14 +452,7 @@ local function fireBullet()
     local camOrigin = Camera.CFrame.Position
     local camDir = Camera.CFrame.LookVector * range
 
-    local rayParams = RaycastParams.new()
-    rayParams.FilterType = Enum.RaycastFilterType.Blacklist
-    local ignore = {Camera}
-    if viewmodel then table.insert(ignore, viewmodel) end
-    if LocalPlayer.Character then table.insert(ignore, LocalPlayer.Character) end
-    rayParams.FilterDescendantsInstances = ignore
-
-    local result = Workspace:Raycast(camOrigin, camDir, rayParams)
+    local result = Workspace:Raycast(camOrigin, camDir, buildFireRayParams())
     local hitPos = result and result.Position or (camOrigin + camDir)
 
     createTracer(muzzlePos, hitPos)
@@ -473,6 +481,25 @@ attemptFire = function()
         return
     end
     fireBullet()
+end
+
+-- Is the (fixed, screen-center) crosshair currently resting on a live
+-- zombie? Same "Zombie" CollectionService tag WeaponService trusts
+-- server-side for damage, so this stays correct if/when multiple zombies
+-- get spawned in later.
+local function crosshairOnLiveZombie()
+    local range = getStat("BulletRange") or 500
+    local camOrigin = Camera.CFrame.Position
+    local camDir = Camera.CFrame.LookVector * range
+
+    local result = Workspace:Raycast(camOrigin, camDir, buildFireRayParams())
+    if not result then return false end
+
+    local hitModel = result.Instance:FindFirstAncestorOfClass("Model")
+    if not hitModel or not CollectionService:HasTag(hitModel, "Zombie") then return false end
+
+    local humanoid = hitModel:FindFirstChildOfClass("Humanoid")
+    return humanoid ~= nil and humanoid.Health > 0
 end
 
 -- ============================================================
@@ -762,3 +789,54 @@ UserInputService.InputEnded:Connect(function(input)
         firing = false
     end
 end)
+
+-- ============================================================
+-- Mobile auto-fire: touch devices have no "hold the trigger" gesture over
+-- the crosshair (it's just a fixed screen-center dot, there's nothing to
+-- press), so instead the weapon fires on its own whenever the crosshair is
+-- resting on a live zombie. Runs at the weapon's own fire rate regardless of
+-- its Auto flag — this is aim assist, not a simulated held mouse button.
+-- ============================================================
+
+if UserInputService.TouchEnabled then
+    local autoFiring = false
+    local TARGET_CHECK_INTERVAL = 1 / 20 -- raycasting every single frame is overkill and costs more on low-end phones
+    local timeSinceLastCheck = 0
+
+    local function stopAutoFire()
+        autoFiring = false
+        firing = false
+    end
+
+    local function startAutoFire()
+        autoFiring = true
+        firing = true
+        task.spawn(function()
+            while autoFiring do
+                attemptFire() -- already a no-op while reloading/melee; the check below stops the loop for melee
+                local rate = getStat("FireRate") or 0.12
+                task.wait(rate)
+            end
+        end)
+    end
+
+    RunService.Heartbeat:Connect(function(dt)
+        if getStat("Type") == "Melee" then
+            if autoFiring then stopAutoFire() end
+            return
+        end
+
+        timeSinceLastCheck += dt
+        if timeSinceLastCheck < TARGET_CHECK_INTERVAL then return end
+        timeSinceLastCheck = 0
+
+        local onTarget = crosshairOnLiveZombie()
+        if onTarget and not autoFiring then
+            startAutoFire()
+        elseif not onTarget and autoFiring then
+            stopAutoFire()
+        end
+    end)
+
+    LocalPlayer.CharacterRemoving:Connect(stopAutoFire)
+end
