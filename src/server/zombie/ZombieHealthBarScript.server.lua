@@ -1,9 +1,10 @@
 local TweenService = game:GetService("TweenService")
 
-local dummy = script.Parent
-local humanoid = dummy:WaitForChild("Humanoid")
-local head = dummy:WaitForChild("Head")
-local background = head:WaitForChild("HealthBillboard").Background
+local zombie = script.Parent
+local humanoid = zombie:WaitForChild("Humanoid")
+local head = zombie:WaitForChild("Head")
+local billboard = head:WaitForChild("HealthBillboard")
+local background = billboard.Background
 local fill = background.Fill
 local hpLabel = background.HPLabel
 
@@ -12,7 +13,7 @@ local hpLabel = background.HPLabel
 humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
 -- NameDisplayDistance = 0 doesn't actually hide it (Roblox falls back to the
 -- model's Name); a blank-ish DisplayName is what actually suppresses the text.
-humanoid.DisplayName = " " -- hide the "WeaponTestDummy" nametag, for now
+humanoid.DisplayName = " "
 
 local COLOURS = {
     Full = Color3.fromRGB(60, 200, 80),
@@ -37,3 +38,8 @@ end
 humanoid:GetPropertyChangedSignal("Health"):Connect(updateHealthBar)
 humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(updateHealthBar)
 updateHealthBar()
+
+-- A dead body doesn't need a health bar floating over it.
+humanoid.Died:Once(function()
+    billboard.Enabled = false
+end)

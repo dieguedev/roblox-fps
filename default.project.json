@@ -80,17 +80,17 @@
     "Workspace": {
       "$className": "Workspace",
       "$ignoreUnknownInstances": true,
-      "WeaponTestDummy": {
+      "Zombie": {
         "$className": "Model",
         "$ignoreUnknownInstances": true,
-        "RespawnScript": {
-          "$path": "src/server/dummy/RespawnScript.server.lua"
+        "ZombieAI": {
+          "$path": "src/server/zombie/ZombieAI.server.lua",
+          "SimplePath": {
+            "$path": "src/server/zombie/SimplePath.lua"
+          }
         },
-        "PatrolScript": {
-          "$path": "src/server/dummy/PatrolScript.server.lua"
-        },
-        "HealthBarScript": {
-          "$path": "src/server/dummy/HealthBarScript.server.lua"
+        "ZombieHealthBarScript": {
+          "$path": "src/server/zombie/ZombieHealthBarScript.server.lua"
         }
       }
     },

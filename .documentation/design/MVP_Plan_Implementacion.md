@@ -25,6 +25,8 @@ El core loop (perseguir → disparar → morir → escalar dificultad) se constr
 - **Sin fuego amigo**: el daño del raycast de arma solo debe aplicar a `Humanoid`s de zombie, nunca a otro jugador. Esto requiere revisar `WeaponService.server.lua` — hoy el raycast excluye solo al propio tirador (`FilterDescendantsInstances = {character}`), así que hay que añadir una comprobación explícita de que el modelo alcanzado es un zombie (no otro jugador) antes de aplicar daño.
 - Sin ataque todavía. Sin rondas todavía. Un único zombie colocado a mano en el mapa de pruebas.
 - Reutiliza tal cual el sistema de daño que ya existe en `WeaponService.server.lua` más allá del ajuste de fuego amigo de arriba.
+- Vida hardcodeada a 150 (baseline del zombie "Normal" según `Juego_Completo.md`), hasta que `ZombieConfig` centralice esto en el Paso 3.
+- El recálculo de ruta debe ser condicional, no en cada intervalo fijo: solo recalcula si la ruta actual se agotó o si el objetivo se ha movido lo suficiente desde el último cálculo. Recalcular sin condición alguna (p.ej. cada 0.5s siempre) interrumpe el `MoveTo` en curso y hace que el zombie se mueva a trompicones en vez de fluido.
 
 **Cómo probarlo:**
 1. Entra en Play Solo en Studio.

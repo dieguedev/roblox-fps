@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local DataStoreService = game:GetService("DataStoreService")
+local CollectionService = game:GetService("CollectionService")
 
 local Modules = ReplicatedStorage:WaitForChild("Modules")
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -326,9 +327,11 @@ FireWeaponEvent.OnServerEvent:Connect(function(player, camOrigin, camDir)
         return
     end
 
+    -- Only zombies (tagged by their AI script) take damage from gunfire, so
+    -- hitting another player never applies damage (no friendly fire).
     local hitModel = result.Instance:FindFirstAncestorOfClass("Model")
     local hitHumanoid = hitModel and hitModel:FindFirstChildOfClass("Humanoid")
-    if hitHumanoid and hitHumanoid ~= humanoid and hitHumanoid.Health > 0 then
+    if hitHumanoid and hitHumanoid.Health > 0 and CollectionService:HasTag(hitModel, "Zombie") then
         local isHeadshot = result.Instance.Name == "Head"
         local damage = cfg.Damage or 0
         if isHeadshot then
