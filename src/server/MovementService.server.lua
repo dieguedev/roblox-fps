@@ -72,8 +72,20 @@ SlideEvent.OnServerEvent:Connect(function(player)
 		direction = Vector3.zero
 	end
 
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		return
+	end
+
 	local anim = (humanoid.RigType == Enum.HumanoidRigType.R15) and SlideAnimationR15 or SlideAnimationR6
-	humanoid:LoadAnimation(anim):Play()
+	local slideTrack = animator:LoadAnimation(anim)
+	-- Force Action priority regardless of what the animation asset was published
+	-- with: the R15 slide clip is authored at Movement priority, the same tier
+	-- the default run animation uses, so without this they'd blend together
+	-- instead of the slide cleanly overriding it (visible as arms still doing
+	-- the run-swing mid-slide).
+	slideTrack.Priority = Enum.AnimationPriority.Action
+	slideTrack:Play()
 	setWeaponHidden(character, true)
 
 	local endTime = os.clock() + SLIDE_DURATION
