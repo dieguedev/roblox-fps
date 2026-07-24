@@ -13,14 +13,15 @@ local CROUCH_HIP_HEIGHT_OFFSET = 1.6 -- studs subtracted from the character's ow
 local SLIDE_COOLDOWN = 1 -- client-side mirror of the server's cooldown, just to keep the button/key from spamming the remote
 
 -- Stamina: draining/regen numbers are the usual shooter defaults (drain over a
--- few seconds, regen slower than drain so you can't tap-spam it back), plus a
--- fixed "gassed out" cooldown once it hits zero so sprint doesn't just
--- toggle back on the instant a sliver of stamina regenerates.
+-- few seconds, regen slower than drain so you can't tap-spam it back). No
+-- fixed cooldown once it hits zero — sprint is just unavailable until you
+-- release Shift and press it again (even if stamina has regenerated in the
+-- meantime while still holding it down).
 local MAX_STAMINA = 100
 local STAMINA_DRAIN_RATE = MAX_STAMINA / 3 -- fully drains after 3s of continuous sprint
 local STAMINA_REGEN_RATE = MAX_STAMINA / 8 -- fully refills over 8s once regenerating
 local STAMINA_REGEN_DELAY = 1 -- seconds after releasing sprint before regen starts
-local EXHAUSTED_COOLDOWN = 5 -- seconds you can't sprint again after fully draining
+local SLIDE_STAMINA_COST = 20 -- flat stamina charge per slide, on top of any sprint drain
 
 local humanoid = nil
 local normalHipHeight = 2
@@ -31,12 +32,11 @@ local isCHeld = false
 local canSlide = true
 
 local stamina = MAX_STAMINA
-local isExhausted = false
-local exhaustedUntil = 0
+local sprintLocked = false -- set once stamina hits 0; cleared only when Shift is released
 local lastSprintStopTime = 0
 
 local function canSprint()
-	return not isExhausted and stamina > 0
+	return not sprintLocked and stamina > 0
 end
 
 local function currentSpeed()
@@ -58,18 +58,33 @@ local function refreshMovementState()
 	humanoid.WalkSpeed = currentSpeed()
 end
 
+-- Shared by the sprint drain (Heartbeat) and the slide's flat charge. Hitting
+-- zero locks sprinting out until Shift is released (see setSprinting) rather
+-- than on a fixed timer.
+local function spendStamina(amount)
+	stamina = math.max(stamina - amount, 0)
+	lastSprintStopTime = os.clock()
+	if stamina <= 0 and not sprintLocked then
+		sprintLocked = true
+		refreshMovementState()
+	end
+end
+
 -- The actual slide (velocity burst + animation) is entirely server-authoritative
 -- now (see MovementService.server.lua) — the client only ever requests it and
 -- keeps a local cooldown so mashing the key/button doesn't spam the remote.
+-- Requires stamina up front (same gate as sprint) so you can't keep sliding
+-- once you're gassed out.
 local function requestSlide()
 	if not humanoid or not canSlide then return end
-	if not (isSprinting and humanoid.MoveDirection.Magnitude > 0.05) then return end
+	if not (isSprinting and canSprint() and humanoid.MoveDirection.Magnitude > 0.05) then return end
 
 	canSlide = false
 	task.delay(SLIDE_COOLDOWN, function()
 		canSlide = true
 	end)
 
+	spendStamina(SLIDE_STAMINA_COST)
 	SlideEvent:FireServer()
 end
 
@@ -98,28 +113,24 @@ end
 
 local function setSprinting(active)
 	isSprinting = active
+	if not active then
+		-- Releasing Shift is the only way to clear the lockout, even if
+		-- stamina has already regenerated while it was still held down.
+		sprintLocked = false
+	end
 	refreshMovementState()
 end
 
 -- Drains while actually sprinting (moving, not crouched), regenerates after a
--- short delay once you stop, and locks sprinting out for EXHAUSTED_COOLDOWN
--- once it hits zero.
+-- short delay once you stop. No fixed lockout timer — once stamina hits 0,
+-- sprint stays unavailable until Shift is released and pressed again.
 RunService.Heartbeat:Connect(function(dt)
 	local activelySprinting = isSprinting and not isCrouching and canSprint()
 		and humanoid and humanoid.MoveDirection.Magnitude > 0.05
 
 	if activelySprinting then
-		stamina = math.max(stamina - STAMINA_DRAIN_RATE * dt, 0)
-		lastSprintStopTime = os.clock()
-		if stamina <= 0 and not isExhausted then
-			isExhausted = true
-			exhaustedUntil = os.clock() + EXHAUSTED_COOLDOWN
-			refreshMovementState()
-		end
+		spendStamina(STAMINA_DRAIN_RATE * dt)
 	else
-		if isExhausted and os.clock() >= exhaustedUntil then
-			isExhausted = false
-		end
 		if os.clock() - lastSprintStopTime >= STAMINA_REGEN_DELAY then
 			local wasDepleted = stamina <= 0
 			stamina = math.min(stamina + STAMINA_REGEN_RATE * dt, MAX_STAMINA)
@@ -142,8 +153,7 @@ local function onCharacterAdded(character)
 	canSlide = true
 
 	stamina = MAX_STAMINA
-	isExhausted = false
-	exhaustedUntil = 0
+	sprintLocked = false
 	lastSprintStopTime = 0
 
 	refreshMovementState()
