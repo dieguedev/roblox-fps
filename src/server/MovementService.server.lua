@@ -2,9 +2,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
-local SlideEvent = ReplicatedStorage:WaitForChild("SlideEvent")
-local SlideAnimationR15 = ReplicatedStorage:WaitForChild("SlideAnimationR15")
-local SlideAnimationR6 = ReplicatedStorage:WaitForChild("SlideAnimationR6")
+local SlideEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SlideEvent")
+local AnimationsPlayer = ReplicatedStorage:WaitForChild("Animations"):WaitForChild("Player")
+local SlideAnimationR15 = AnimationsPlayer:WaitForChild("SlideAnimationR15")
+local SlideAnimationR6 = AnimationsPlayer:WaitForChild("SlideAnimationR6")
 
 -- Started as a port of the "SlideClient" toolbox script (by SnowCHC), which
 -- used a raw BodyVelocity + PlatformStand impulse. That bypassed the

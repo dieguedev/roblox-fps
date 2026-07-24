@@ -7,13 +7,15 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
-local WeaponConfig = require(ReplicatedStorage:WaitForChild("WeaponConfig"))
-local EquipWeaponEvent = ReplicatedStorage:WaitForChild("EquipWeaponEvent")
-local FireWeaponEvent = ReplicatedStorage:WaitForChild("FireWeaponEvent")
-local WeaponEffectsEvent = ReplicatedStorage:WaitForChild("WeaponEffectsEvent")
-local ReloadWeaponEvent = ReplicatedStorage:WaitForChild("ReloadWeaponEvent")
-local HitmarkerEvent = ReplicatedStorage:WaitForChild("HitmarkerEvent")
-local DamageNumberEvent = ReplicatedStorage:WaitForChild("DamageNumberEvent")
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local WeaponConfig = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("WeaponConfig"))
+local EquipWeaponEvent = Remotes:WaitForChild("EquipWeaponEvent")
+local FireWeaponEvent = Remotes:WaitForChild("FireWeaponEvent")
+local WeaponEffectsEvent = Remotes:WaitForChild("WeaponEffectsEvent")
+local ReloadWeaponEvent = Remotes:WaitForChild("ReloadWeaponEvent")
+local HitmarkerEvent = Remotes:WaitForChild("HitmarkerEvent")
+local DamageNumberEvent = Remotes:WaitForChild("DamageNumberEvent")
 
 local WEAPON_MODEL_NAME = "EquippedWeaponModel"
 
@@ -141,14 +143,17 @@ local function createMuzzleFlash(pos, cframe)
 end
 
 -- Generic per-weapon gunshot sound: looks up a Sound named "<WeaponName>Shot"
--- in ReplicatedStorage (e.g. "AK47Shot") so adding a new weapon's fire sound
--- is just dropping in a Sound with the matching name — no code changes needed.
+-- in ReplicatedStorage.Sounds.Weapons (e.g. "AK47Shot") so adding a new
+-- weapon's fire sound is just dropping in a Sound with the matching name —
+-- no code changes needed.
 -- Silently does nothing if that weapon has no shot sound yet.
 -- Played from a throwaway anchored part (rather than the hitmarker's flat
 -- ScreenGui) so it's positional 3D audio, consistent for both the shooter and
 -- anyone else nearby.
+local weaponSounds = ReplicatedStorage:WaitForChild("Sounds"):WaitForChild("Weapons")
+
 local function playWeaponFireSound(weaponName, position)
-    local soundTemplate = ReplicatedStorage:FindFirstChild(weaponName .. "Shot")
+    local soundTemplate = weaponSounds:FindFirstChild(weaponName .. "Shot")
     if not soundTemplate then return end
 
     local anchor = Instance.new("Part")
@@ -175,8 +180,9 @@ end
 -- with a distinct sound (and a screen-centered spark burst) for headshots.
 -- ============================================================
 
-local hitmarkerSound = ReplicatedStorage:FindFirstChild("HitmarkerSound")
-local hitmarkerHeadshotSound = ReplicatedStorage:FindFirstChild("HitmarkerHeadshotSound")
+local hitmarkerSounds = ReplicatedStorage:WaitForChild("Sounds"):WaitForChild("Hitmarker")
+local hitmarkerSound = hitmarkerSounds:FindFirstChild("HitmarkerSound")
+local hitmarkerHeadshotSound = hitmarkerSounds:FindFirstChild("HitmarkerHeadshotSound")
 
 local hitmarkerGui = Instance.new("ScreenGui")
 hitmarkerGui.Name = "HitmarkerGui"

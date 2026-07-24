@@ -3,7 +3,7 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
-local SlideEvent = ReplicatedStorage:WaitForChild("SlideEvent")
+local SlideEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SlideEvent")
 
 local WALK_SPEED = 16
 local SPRINT_SPEED = 26

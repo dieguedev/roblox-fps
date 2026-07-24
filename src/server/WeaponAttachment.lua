@@ -1,6 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local WeaponConfig = require(ReplicatedStorage:WaitForChild("WeaponConfig"))
+local WeaponConfig = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("WeaponConfig"))
 
 local WeaponAttachment = {}
 

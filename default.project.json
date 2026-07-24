@@ -6,29 +6,37 @@
     "ReplicatedStorage": {
       "$className": "ReplicatedStorage",
       "$ignoreUnknownInstances": true,
-      "WeaponConfig": {
-        "$path": "src/shared/WeaponConfig.lua"
+      "Modules": {
+        "$className": "Folder",
+        "$ignoreUnknownInstances": true,
+        "WeaponConfig": {
+          "$path": "src/shared/WeaponConfig.lua"
+        }
       },
-      "FireWeaponEvent": {
-        "$className": "RemoteEvent"
-      },
-      "EquipWeaponEvent": {
-        "$className": "RemoteEvent"
-      },
-      "WeaponEffectsEvent": {
-        "$className": "RemoteEvent"
-      },
-      "HitmarkerEvent": {
-        "$className": "RemoteEvent"
-      },
-      "DamageNumberEvent": {
-        "$className": "RemoteEvent"
-      },
-      "ReloadWeaponEvent": {
-        "$className": "RemoteEvent"
-      },
-      "SlideEvent": {
-        "$className": "RemoteEvent"
+      "Remotes": {
+        "$className": "Folder",
+        "$ignoreUnknownInstances": true,
+        "FireWeaponEvent": {
+          "$className": "RemoteEvent"
+        },
+        "EquipWeaponEvent": {
+          "$className": "RemoteEvent"
+        },
+        "WeaponEffectsEvent": {
+          "$className": "RemoteEvent"
+        },
+        "HitmarkerEvent": {
+          "$className": "RemoteEvent"
+        },
+        "DamageNumberEvent": {
+          "$className": "RemoteEvent"
+        },
+        "ReloadWeaponEvent": {
+          "$className": "RemoteEvent"
+        },
+        "SlideEvent": {
+          "$className": "RemoteEvent"
+        }
       }
     },
 

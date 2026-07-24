@@ -2,7 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
 local LocalPlayer = Players.LocalPlayer
-local WeaponConfig = require(ReplicatedStorage:WaitForChild("WeaponConfig"))
+local WeaponConfig = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("WeaponConfig"))
 
 -- ============================================================
 -- STYLE: everything visual lives here. Change freely, nothing
