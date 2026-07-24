@@ -10,8 +10,11 @@ local WeaponConfig = require(ReplicatedStorage:WaitForChild("Modules"):WaitForCh
 -- ============================================================
 local CONFIG = {
     AnchorCorner = Vector2.new(1, 1), -- bottom-right
-    Offset = UDim2.new(1, -24, 1, -24), -- distance from that corner
-    Size = UDim2.new(0, 240, 0, 90),
+    -- Position/Size are Scale-based (not pixel offsets) so the panel stays
+    -- proportional across resolutions/aspect ratios (mobile included) instead
+    -- of being a fixed-size box that's oversized on a phone or tiny on 4K.
+    Position = UDim2.new(0.98, 0, 0.98, 0), -- 2% inset from that corner
+    Size = UDim2.new(0.14, 0, 0.08, 0), -- ~ same as the old 240x90 at 1920x1080
     IconTextGap = 6, -- horizontal gap between the icon and the text column
 
     BackgroundColor = Color3.fromRGB(20, 20, 20),
@@ -66,7 +69,7 @@ screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 local frame = Instance.new("Frame")
 frame.Name = "AmmoFrame"
 frame.AnchorPoint = CONFIG.AnchorCorner
-frame.Position = CONFIG.Offset
+frame.Position = CONFIG.Position
 frame.Size = CONFIG.Size
 frame.BackgroundColor3 = CONFIG.BackgroundColor
 frame.BackgroundTransparency = CONFIG.BackgroundTransparency

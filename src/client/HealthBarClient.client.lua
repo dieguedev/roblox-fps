@@ -2,9 +2,11 @@
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 
--- UI Variables
+-- UI Variables: HudStack (shared bottom-left layout; health at the bottom,
+-- other bars stack above it with a gap) and the health bar itself both
+-- already exist in VitalsGUI -- built in Studio, not generated here.
 local GUI = script.Parent
-local HEALTHBAR = GUI:WaitForChild("Healthbar")
+local HEALTHBAR = GUI:WaitForChild("HudStack"):WaitForChild("Healthbar")
 local PROGRESSBAR = HEALTHBAR:WaitForChild("Healthbar")
 local PERCENTAGE = HEALTHBAR:WaitForChild("percentage")
 

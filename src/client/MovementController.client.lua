@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 local SlideEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SlideEvent")
@@ -11,6 +12,16 @@ local CROUCH_SPEED = 8
 local CROUCH_HIP_HEIGHT_OFFSET = 1.6 -- studs subtracted from the character's own HipHeight while crouched
 local SLIDE_COOLDOWN = 1 -- client-side mirror of the server's cooldown, just to keep the button/key from spamming the remote
 
+-- Stamina: draining/regen numbers are the usual shooter defaults (drain over a
+-- few seconds, regen slower than drain so you can't tap-spam it back), plus a
+-- fixed "gassed out" cooldown once it hits zero so sprint doesn't just
+-- toggle back on the instant a sliver of stamina regenerates.
+local MAX_STAMINA = 100
+local STAMINA_DRAIN_RATE = MAX_STAMINA / 3 -- fully drains after 3s of continuous sprint
+local STAMINA_REGEN_RATE = MAX_STAMINA / 8 -- fully refills over 8s once regenerating
+local STAMINA_REGEN_DELAY = 1 -- seconds after releasing sprint before regen starts
+local EXHAUSTED_COOLDOWN = 5 -- seconds you can't sprint again after fully draining
+
 local humanoid = nil
 local normalHipHeight = 2
 
@@ -19,9 +30,18 @@ local isCrouching = false
 local isCHeld = false
 local canSlide = true
 
+local stamina = MAX_STAMINA
+local isExhausted = false
+local exhaustedUntil = 0
+local lastSprintStopTime = 0
+
+local function canSprint()
+	return not isExhausted and stamina > 0
+end
+
 local function currentSpeed()
 	if isCrouching then return CROUCH_SPEED end
-	if isSprinting then return SPRINT_SPEED end
+	if isSprinting and canSprint() then return SPRINT_SPEED end
 	return WALK_SPEED
 end
 
@@ -81,6 +101,37 @@ local function setSprinting(active)
 	refreshMovementState()
 end
 
+-- Drains while actually sprinting (moving, not crouched), regenerates after a
+-- short delay once you stop, and locks sprinting out for EXHAUSTED_COOLDOWN
+-- once it hits zero.
+RunService.Heartbeat:Connect(function(dt)
+	local activelySprinting = isSprinting and not isCrouching and canSprint()
+		and humanoid and humanoid.MoveDirection.Magnitude > 0.05
+
+	if activelySprinting then
+		stamina = math.max(stamina - STAMINA_DRAIN_RATE * dt, 0)
+		lastSprintStopTime = os.clock()
+		if stamina <= 0 and not isExhausted then
+			isExhausted = true
+			exhaustedUntil = os.clock() + EXHAUSTED_COOLDOWN
+			refreshMovementState()
+		end
+	else
+		if isExhausted and os.clock() >= exhaustedUntil then
+			isExhausted = false
+		end
+		if os.clock() - lastSprintStopTime >= STAMINA_REGEN_DELAY then
+			local wasDepleted = stamina <= 0
+			stamina = math.min(stamina + STAMINA_REGEN_RATE * dt, MAX_STAMINA)
+			if wasDepleted and stamina > 0 then
+				refreshMovementState() -- speed can pick back up mid-regen if the cooldown already ended
+			end
+		end
+	end
+
+	LocalPlayer:SetAttribute("Stamina", stamina / MAX_STAMINA)
+end)
+
 local function onCharacterAdded(character)
 	humanoid = character:WaitForChild("Humanoid")
 	normalHipHeight = humanoid.HipHeight
@@ -89,6 +140,11 @@ local function onCharacterAdded(character)
 	isCrouching = false
 	isCHeld = false
 	canSlide = true
+
+	stamina = MAX_STAMINA
+	isExhausted = false
+	exhaustedUntil = 0
+	lastSprintStopTime = 0
 
 	refreshMovementState()
 end

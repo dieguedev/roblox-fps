@@ -98,11 +98,14 @@
     "StarterGui": {
       "$className": "StarterGui",
       "$ignoreUnknownInstances": true,
-      "Basic Health GUI": {
+      "VitalsGUI": {
         "$className": "ScreenGui",
         "$ignoreUnknownInstances": true,
         "HealthBarClient": {
           "$path": "src/client/HealthBarClient.client.lua"
+        },
+        "StaminaBarClient": {
+          "$path": "src/client/StaminaBarClient.client.lua"
         }
       }
     }
