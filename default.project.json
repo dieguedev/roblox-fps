@@ -26,6 +26,9 @@
       },
       "ReloadWeaponEvent": {
         "$className": "RemoteEvent"
+      },
+      "SlideEvent": {
+        "$className": "RemoteEvent"
       }
     },
 
@@ -37,6 +40,9 @@
       },
       "WeaponAttachment": {
         "$path": "src/server/WeaponAttachment.lua"
+      },
+      "MovementService": {
+        "$path": "src/server/MovementService.server.lua"
       }
     },
 
