@@ -63,7 +63,19 @@
         "$className": "StarterPlayerScripts",
         "$ignoreUnknownInstances": true,
         "WeaponController": {
-          "$path": "src/client/WeaponController.client.lua"
+          "$path": "src/client/Weapon/WeaponController.client.lua",
+          "WeaponEquip": {
+            "$path": "src/client/Weapon/WeaponEquip.lua"
+          },
+          "WeaponFiring": {
+            "$path": "src/client/Weapon/WeaponFiring.lua"
+          },
+          "WeaponViewmodel": {
+            "$path": "src/client/Weapon/WeaponViewmodel.lua"
+          },
+          "WeaponEffects": {
+            "$path": "src/client/Weapon/WeaponEffects.lua"
+          }
         },
         "MovementController": {
           "$path": "src/client/MovementController.client.lua"
