@@ -9,6 +9,7 @@ local GUI = script.Parent
 local HEALTHBAR = GUI:WaitForChild("HudStack"):WaitForChild("Healthbar")
 local PROGRESSBAR = HEALTHBAR:WaitForChild("Healthbar")
 local PERCENTAGE = HEALTHBAR:WaitForChild("percentage")
+local PERCENTAGE_STROKE = PERCENTAGE:WaitForChild("UIStroke")
 
 -- Character Variables
 local PLR = Players.LocalPlayer -- LocalPlayer Variable
@@ -29,15 +30,18 @@ local Colours = {
 local Tweens = {
 	LowHealth = {
 		TweenService:Create(PROGRESSBAR, TweenColourInfo, {BackgroundColor3=Colours.LowHealth}),
-		TweenService:Create(HEALTHBAR.UIStroke, TweenColourInfo, {Color=Colours.LowHealth:Lerp(Color3.new(0,0,0),.75)})
+		TweenService:Create(HEALTHBAR.UIStroke, TweenColourInfo, {Color=Colours.LowHealth:Lerp(Color3.new(0,0,0),.75)}),
+		TweenService:Create(PERCENTAGE_STROKE, TweenColourInfo, {Color=Colours.LowHealth:Lerp(Color3.new(0,0,0),.75)})
 	},
 	MidHealth = {
 		TweenService:Create(PROGRESSBAR, TweenColourInfo, {BackgroundColor3=Colours.MidHealth}),
-		TweenService:Create(HEALTHBAR.UIStroke, TweenColourInfo, {Color=Colours.MidHealth:Lerp(Color3.new(0,0,0),.75)})
+		TweenService:Create(HEALTHBAR.UIStroke, TweenColourInfo, {Color=Colours.MidHealth:Lerp(Color3.new(0,0,0),.75)}),
+		TweenService:Create(PERCENTAGE_STROKE, TweenColourInfo, {Color=Colours.MidHealth:Lerp(Color3.new(0,0,0),.75)})
 	},
 	FullHealth = {
 		TweenService:Create(PROGRESSBAR, TweenColourInfo, {BackgroundColor3=Colours.FullHealth}),
-		TweenService:Create(HEALTHBAR.UIStroke, TweenColourInfo, {Color=Colours.FullHealth:Lerp(Color3.new(0,0,0),.75)})
+		TweenService:Create(HEALTHBAR.UIStroke, TweenColourInfo, {Color=Colours.FullHealth:Lerp(Color3.new(0,0,0),.75)}),
+		TweenService:Create(PERCENTAGE_STROKE, TweenColourInfo, {Color=Colours.FullHealth:Lerp(Color3.new(0,0,0),.75)})
 	},
 }
 local Connections = {}
