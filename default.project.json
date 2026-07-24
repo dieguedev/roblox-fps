@@ -51,6 +51,9 @@
       },
       "MovementService": {
         "$path": "src/server/MovementService.server.lua"
+      },
+      "HealthRegenService": {
+        "$path": "src/server/HealthRegenService.server.lua"
       }
     },
 
