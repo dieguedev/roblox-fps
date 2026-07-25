@@ -77,40 +77,67 @@ end
 -- point gets used exactly once before any of them repeats.
 local spawnQueue = {}
 
--- "Elegidos al azar evitando el más cercano a cualquier jugador": whichever
--- single spawn point is nearest to ANY player right now is excluded from
--- this batch, then the rest are shuffled into the queue.
-local function refillSpawnQueue()
-    local spawnPoints = {}
-    for _, point in zombieSpawnsFolder:GetChildren() do
-        if point:IsA("BasePart") then
-            table.insert(spawnPoints, point)
+-- Playtesting showed zombies from far-off spawn points could take 15-20+
+-- seconds just to close the distance on a big map, which read as "the
+-- zombies never actually reach me" even though they'd technically spawned.
+-- Capping how far a spawn point may be from the nearest player keeps every
+-- zombie within striking distance, which is also what makes "training"
+-- (kiting a line of zombies around an obstacle) actually happen -- they
+-- need to already be in your immediate area to end up funneling behind you.
+local MAX_SPAWN_DISTANCE = 300 -- studs, from the nearest player
+
+local function distanceToNearestPlayer(position)
+    local nearest = math.huge
+    for _, player in Players:GetPlayers() do
+        local character = player.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if root then
+            local distance = (root.Position - position).Magnitude
+            if distance < nearest then
+                nearest = distance
+            end
         end
     end
+    return nearest
+end
+
+-- "Elegidos al azar evitando el más cercano a cualquier jugador": among the
+-- points within range (see MAX_SPAWN_DISTANCE above), whichever single one
+-- is nearest to ANY player right now is excluded from this batch, then the
+-- rest are shuffled into the queue.
+local function refillSpawnQueue()
+    local inRange = {}
+    local allPoints = {}
+    for _, point in zombieSpawnsFolder:GetChildren() do
+        if point:IsA("BasePart") then
+            table.insert(allPoints, point)
+            if distanceToNearestPlayer(point.Position) <= MAX_SPAWN_DISTANCE then
+                table.insert(inRange, point)
+            end
+        end
+    end
+    -- Nobody in range (e.g. no players yet, or a spread-out map with no
+    -- point within MAX_SPAWN_DISTANCE) -- fall back to every point so
+    -- spawning never just stalls.
+    local candidates = (#inRange > 0) and inRange or allPoints
 
     local nearestPoint, nearestDistance = nil, math.huge
-    for _, point in spawnPoints do
-        for _, player in Players:GetPlayers() do
-            local character = player.Character
-            local root = character and character:FindFirstChild("HumanoidRootPart")
-            if root then
-                local distance = (root.Position - point.Position).Magnitude
-                if distance < nearestDistance then
-                    nearestPoint, nearestDistance = point, distance
-                end
-            end
+    for _, point in candidates do
+        local distance = distanceToNearestPlayer(point.Position)
+        if distance < nearestDistance then
+            nearestPoint, nearestDistance = point, distance
         end
     end
 
     local eligible = {}
-    for _, point in spawnPoints do
+    for _, point in candidates do
         if point ~= nearestPoint then
             table.insert(eligible, point)
         end
     end
     if #eligible == 0 then
-        -- Only one spawn point total (or no players yet to exclude one against).
-        eligible = spawnPoints
+        -- Only one candidate total (or no players yet to exclude one against).
+        eligible = candidates
     end
 
     -- Fisher-Yates shuffle.

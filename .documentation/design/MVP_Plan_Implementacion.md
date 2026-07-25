@@ -77,7 +77,7 @@ El core loop (perseguir → disparar → morir → escalar dificultad) se constr
 
 **Qué se construye:**
 - `RoundService.server.lua`: contador de ronda, cola de zombies por ronda, y lógica de spawn:
-  - Puntos de spawn fijos en el mapa (varios), elegidos al azar evitando el más cercano a cualquier jugador.
+  - Puntos de spawn fijos en el mapa (varios), elegidos al azar evitando el más cercano a cualquier jugador. Solo se usan puntos a 300 studs o menos del jugador más cercano (los más lejanos se descartan para esa tanda), para que ningún zombie tarde una eternidad en llegar y para que se puedan formar "trains" (fila de zombies siguiéndote alrededor de un obstáculo) en vez de venir cada uno en línea recta desde muy lejos.
   - Spawn inmediato: todos los zombies del total de la ronda salen de golpe al empezar (repartidos entre los puntos de spawn disponibles), no escalonado. (Ajustado tras playtesting: el spawn escalonado original se sentía demasiado lento comparado con la cantidad de zombies ya subida.)
   - Sin límite artificial de zombies simultáneos: el techo es el total de la ronda.
   - Ronda termina cuando cola vacía + cero zombies vivos.
