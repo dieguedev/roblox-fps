@@ -78,13 +78,13 @@ El core loop (perseguir → disparar → morir → escalar dificultad) se constr
 **Qué se construye:**
 - `RoundService.server.lua`: contador de ronda, cola de zombies por ronda, y lógica de spawn:
   - Puntos de spawn fijos en el mapa (varios), elegidos al azar evitando el más cercano a cualquier jugador.
-  - Spawn escalonado por intervalo fijo, salvo que no quede ningún zombie activo y aún haya cola (en ese caso, spawnea inmediatamente el siguiente sin esperar el intervalo).
+  - Spawn inmediato: todos los zombies del total de la ronda salen de golpe al empezar (repartidos entre los puntos de spawn disponibles), no escalonado. (Ajustado tras playtesting: el spawn escalonado original se sentía demasiado lento comparado con la cantidad de zombies ya subida.)
   - Sin límite artificial de zombies simultáneos: el techo es el total de la ronda.
   - Ronda termina cuando cola vacía + cero zombies vivos.
   - Descanso fijo automático entre rondas (sin posibilidad de saltarlo ni de decidir cuándo empieza la siguiente).
 - **Cantidad de zombies por ronda**, dos factores combinados:
   - Cantidad base por ronda (crece con la ronda, con techo — igual que en CoD la cantidad deja de subir a partir de cierta ronda y la dificultad restante viene solo del escalado de vida): `cantidadBaseRonda(ronda) = min(round(6 + ronda * 1.5), 40)`. Ej.: ronda 1 ≈ 8, ronda 10 ≈ 21, ronda 20 ≈ 36, ronda 25+ = 40 (techo).
-  - Escala según el número de jugadores presentes (así funciona también en CoD Zombies: escala la cantidad, no la vida individual): `zombiesEnRonda = ceil(cantidadBaseRonda(ronda) * jugadoresPresentes / 4)`, con mínimo 1. Una partida en solitario tiene menos zombies por ronda que una de 4, pero cada zombie individual tiene la misma vida en ambos casos (la vida depende solo de la ronda, no del tamaño de grupo).
+  - Escala según el número de jugadores presentes, pero sin dividir el total entre ellos: en solitario se recibe la cantidad base completa (para que ronda 1 ya se sienta como un enjambre en vez de 1-2 zombies sueltos), y cada jugador adicional suma un +50% más sobre la base: `zombiesEnRonda = ceil(cantidadBaseRonda(ronda) * (1 + 0.5 * (jugadoresPresentes - 1)))`, con mínimo 1. La vida por zombie sigue dependiendo solo de la ronda, no del tamaño de grupo. (Ajustado tras playtesting: la versión original —`* jugadoresPresentes / 4`— dejaba solo con ~2 zombies en ronda 1, demasiado poco.)
 - Escalado de vida por ronda, fórmula real de CoD Zombies:
   - Rondas 1-9: `vida = vidaBase + 100 * (ronda - 1)`.
   - Ronda 10+: `vida = vida(ronda 9) * 1.1 ^ (ronda - 9)`.

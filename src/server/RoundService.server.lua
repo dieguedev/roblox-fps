@@ -21,7 +21,6 @@ local templatesByType = {
 
 local zombieSpawnsFolder = Workspace:WaitForChild("ZombieSpawns")
 
-local SPAWN_INTERVAL = 3 -- seconds between staggered spawns while zombies are still alive
 local REST_DURATION = 15 -- fixed downtime between rounds, cannot be skipped
 -- Chance that any given spawn is a Corredor instead of Normal. No mix ratio
 -- is specified by the design doc for this step; tune freely.
@@ -33,10 +32,15 @@ local function baseCountForRound(round)
     return math.min(math.floor(6 + round * 1.5 + 0.5), 40)
 end
 
--- Scales zombie count with players present, not per-zombie HP (HP depends
--- only on round). Minimum of 1 so a lone player never sees an empty queue.
+-- Solo gets the FULL base curve (not divided down to a quarter of it) so
+-- round 1 already feels like a horde coming at you, not 1-2 stragglers.
+-- Extra players add on top instead of the count being split between them --
+-- +50% of the base count per extra player, same spirit as real CoD Zombies
+-- (more players = noticeably more zombies, not the same total shared out).
+local EXTRA_PER_PLAYER_FRACTION = 0.5
 local function zombiesForRound(round, playerCount)
-    return math.max(1, math.ceil(baseCountForRound(round) * playerCount / 4))
+    local base = baseCountForRound(round)
+    return math.max(1, math.ceil(base * (1 + EXTRA_PER_PLAYER_FRACTION * (playerCount - 1))))
 end
 
 -- Real CoD Zombies HP curve, computed off the Normal baseline and then
@@ -55,28 +59,44 @@ local function healthForRound(typeBaseHealth, round)
     return normalHealthAtRound * ratioToNormal
 end
 
+-- Dedicated RNG instance instead of the global math.random: a whole round's
+-- worth of zombies spawns back-to-back in the same frame (see runRound's
+-- burst loop below), and independent math.random() calls with no yield in
+-- between it turned out to streak hard -- 15 zombies could land on the same
+-- point while 12 others sat empty. The shuffled-bag approach below removes
+-- the streaking risk entirely: it guarantees every point is used once before
+-- any point repeats, rather than trusting per-call randomness for spread.
+local rng = Random.new()
+
 local function pickZombieType()
-    return (math.random() < CORREDOR_CHANCE) and "Corredor" or "Normal"
+    return (rng:NextNumber() < CORREDOR_CHANCE) and "Corredor" or "Normal"
 end
 
--- "Elegidos al azar evitando el más cercano a cualquier jugador": finds
--- whichever single spawn point is nearest to ANY player right now and
--- excludes just that one, then picks randomly among the rest.
-local function pickSpawnPoint()
-    local spawnPoints = zombieSpawnsFolder:GetChildren()
-    local players = Players:GetPlayers()
+-- Shuffled queue of spawn points; refilled (and reshuffled) whenever it runs
+-- dry, so within any run of N spawns (N = number of eligible points) every
+-- point gets used exactly once before any of them repeats.
+local spawnQueue = {}
+
+-- "Elegidos al azar evitando el más cercano a cualquier jugador": whichever
+-- single spawn point is nearest to ANY player right now is excluded from
+-- this batch, then the rest are shuffled into the queue.
+local function refillSpawnQueue()
+    local spawnPoints = {}
+    for _, point in zombieSpawnsFolder:GetChildren() do
+        if point:IsA("BasePart") then
+            table.insert(spawnPoints, point)
+        end
+    end
 
     local nearestPoint, nearestDistance = nil, math.huge
     for _, point in spawnPoints do
-        if point:IsA("BasePart") then
-            for _, player in players do
-                local character = player.Character
-                local root = character and character:FindFirstChild("HumanoidRootPart")
-                if root then
-                    local distance = (root.Position - point.Position).Magnitude
-                    if distance < nearestDistance then
-                        nearestPoint, nearestDistance = point, distance
-                    end
+        for _, player in Players:GetPlayers() do
+            local character = player.Character
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            if root then
+                local distance = (root.Position - point.Position).Magnitude
+                if distance < nearestDistance then
+                    nearestPoint, nearestDistance = point, distance
                 end
             end
         end
@@ -84,7 +104,7 @@ local function pickSpawnPoint()
 
     local eligible = {}
     for _, point in spawnPoints do
-        if point:IsA("BasePart") and point ~= nearestPoint then
+        if point ~= nearestPoint then
             table.insert(eligible, point)
         end
     end
@@ -92,7 +112,20 @@ local function pickSpawnPoint()
         -- Only one spawn point total (or no players yet to exclude one against).
         eligible = spawnPoints
     end
-    return eligible[math.random(1, #eligible)]
+
+    -- Fisher-Yates shuffle.
+    for i = #eligible, 2, -1 do
+        local j = rng:NextInteger(1, i)
+        eligible[i], eligible[j] = eligible[j], eligible[i]
+    end
+    spawnQueue = eligible
+end
+
+local function pickSpawnPoint()
+    if #spawnQueue == 0 then
+        refillSpawnQueue()
+    end
+    return table.remove(spawnQueue)
 end
 
 -- Spawns immediately and returns once the zombie is parented; the caller
@@ -120,19 +153,17 @@ end
 local function runRound(round)
     Workspace:SetAttribute("Round", round)
 
-    local queueRemaining = zombiesForRound(round, #Players:GetPlayers())
+    local total = zombiesForRound(round, #Players:GetPlayers())
     local aliveCount = 0
-    local lastSpawnTime = -math.huge
 
-    while queueRemaining > 0 or aliveCount > 0 do
-        if queueRemaining > 0 and (aliveCount == 0 or os.clock() - lastSpawnTime >= SPAWN_INTERVAL) then
-            queueRemaining -= 1
-            aliveCount += 1
-            lastSpawnTime = os.clock()
-            spawnZombie(round, function()
-                aliveCount -= 1
-            end)
-        end
+    for _ = 1, total do
+        aliveCount += 1
+        spawnZombie(round, function()
+            aliveCount -= 1
+        end)
+    end
+
+    while aliveCount > 0 do
         task.wait(0.25)
     end
 end

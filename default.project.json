@@ -65,7 +65,37 @@
 
     "ServerStorage": {
       "$className": "ServerStorage",
-      "$ignoreUnknownInstances": true
+      "$ignoreUnknownInstances": true,
+      "ZombieTemplates": {
+        "$className": "Folder",
+        "$ignoreUnknownInstances": true,
+        "Normal": {
+          "$className": "Model",
+          "$ignoreUnknownInstances": true,
+          "ZombieAI": {
+            "$path": "src/server/zombie/ZombieAI.server.lua",
+            "SimplePath": {
+              "$path": "src/server/zombie/SimplePath.lua"
+            }
+          },
+          "ZombieHealthBarScript": {
+            "$path": "src/server/zombie/ZombieHealthBarScript.server.lua"
+          }
+        },
+        "Corredor": {
+          "$className": "Model",
+          "$ignoreUnknownInstances": true,
+          "ZombieAI": {
+            "$path": "src/server/zombie/ZombieAI.server.lua",
+            "SimplePath": {
+              "$path": "src/server/zombie/SimplePath.lua"
+            }
+          },
+          "ZombieHealthBarScript": {
+            "$path": "src/server/zombie/ZombieHealthBarScript.server.lua"
+          }
+        }
+      }
     },
 
     "StarterPlayer": {

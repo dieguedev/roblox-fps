@@ -5,7 +5,12 @@ local WeaponConfig = {
         FireRate = 0.10,
         BulletSpeed = 3000,
         BulletRange = 500,
-        Damage = 17,
+        -- Rebalanced against real CoD Zombies AR damage (BO2's M27/MTAR deal
+        -- ~30-40 per bullet at close range) now that zombie HP follows the
+        -- real CoD curve (150 round 1 -> ~950 round 9 -> exponential after):
+        -- the old value of 17 meant ~9 body shots just to drop a round-1
+        -- Normal, which is why early rounds dragged.
+        Damage = 35,
         HeadshotMultiplier = 2,
         TracerColor = Color3.fromRGB(255, 220, 80),
         TracerThickness = 0.15,
@@ -26,8 +31,11 @@ local WeaponConfig = {
         FireRate = 0.20,
         BulletSpeed = 2500,
         BulletRange = 350,
-        Damage = 20,
-        HeadshotMultiplier = 1.75,
+        -- Secondary stays weaker than the primary (real CoD pistols like the
+        -- M1911 are a rounds-1-3 stopgap, not a mainline weapon), but still
+        -- bumped up from 20 for the same reason as AK47.Damage above.
+        Damage = 24,
+        HeadshotMultiplier = 2,
         TracerColor = Color3.fromRGB(200, 220, 255),
         TracerThickness = 0.1,
         TracerLifetime = 0.06,
