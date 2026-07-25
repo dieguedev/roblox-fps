@@ -24,8 +24,12 @@ if not stats then
     stats = ZombieConfig.Normal
 end
 
-humanoid.MaxHealth = stats.MaxHealth
-humanoid.Health = stats.MaxHealth
+-- RoundService sets this attribute (round-scaled HP) before parenting the
+-- clone, i.e. before this script even starts running, so there's no race
+-- between the two scripts over who sets Humanoid.Health last.
+local maxHealth = zombie:GetAttribute("RoundMaxHealth") or stats.MaxHealth
+humanoid.MaxHealth = maxHealth
+humanoid.Health = maxHealth
 humanoid.WalkSpeed = stats.WalkSpeed
 
 -- Checked frequently (not recomputed frequently -- see the idle/moved gate

@@ -260,7 +260,10 @@ local function refresh()
 
     local mag = LocalPlayer:GetAttribute("AmmoInMag") or 0
     local reserve = LocalPlayer:GetAttribute("AmmoReserve") or 0
-    ammoLabel.Text = string.format("%d / %d", mag, reserve)
+    -- Reserve is infinite (math.huge) by design -- %d can't format that (no
+    -- integer representation), so it gets its own symbol instead of a number.
+    local reserveText = (reserve == math.huge) and "∞" or string.format("%d", reserve)
+    ammoLabel.Text = string.format("%d / %s", mag, reserveText)
 
     local reloading = LocalPlayer:GetAttribute("Reloading") == true
     reloadLabel.Visible = reloading

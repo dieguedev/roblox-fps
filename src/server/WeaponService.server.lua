@@ -70,7 +70,11 @@ local function resetAmmoForWeapon(player, weaponName)
     local cfg = WeaponConfig[weaponName]
     if not cfg or cfg.Type ~= "Ranged" then return end
     ammoState[player] = ammoState[player] or {}
-    ammoState[player][weaponName] = {mag = cfg.MagazineSize, reserve = cfg.ReserveAmmo}
+    -- Reserve is intentionally infinite: with no real way to recover ammo
+    -- mid-round, a finite reserve would just be a countdown to a hard stop.
+    -- The magazine (cfg.MagazineSize) is still the real limiter -- you still
+    -- have to reload, you just never run completely dry.
+    ammoState[player][weaponName] = {mag = cfg.MagazineSize, reserve = math.huge}
 end
 
 local function getAmmo(player, weaponName)
