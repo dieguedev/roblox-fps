@@ -14,6 +14,9 @@
         },
         "ZombieConfig": {
           "$path": "src/shared/ZombieConfig.lua"
+        },
+        "LightingConfig": {
+          "$path": "src/shared/LightingConfig.lua"
         }
       },
       "Remotes": {
@@ -60,6 +63,9 @@
       },
       "RoundService": {
         "$path": "src/server/RoundService.server.lua"
+      },
+      "LightingService": {
+        "$path": "src/server/LightingService.server.lua"
       }
     },
 
