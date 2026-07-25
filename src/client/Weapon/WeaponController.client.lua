@@ -8,6 +8,9 @@ local WeaponViewmodel = require(script.WeaponViewmodel)
 -- WeaponFiring pulls in WeaponEffects itself (tracers/flash/sound on every
 -- shot), which also wires up its own remote listeners as a side effect.
 local WeaponFiring = require(script.WeaponFiring)
+-- WeaponReload wires up its own Reloading-attribute listener as a side
+-- effect, same pattern as WeaponFiring's remote listeners above.
+require(script.WeaponReload)
 
 -- ============================================================
 -- Character lifecycle

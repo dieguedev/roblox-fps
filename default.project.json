@@ -122,6 +122,9 @@
           },
           "WeaponEffects": {
             "$path": "src/client/Weapon/WeaponEffects.lua"
+          },
+           "WeaponReload": {
+            "$path": "src/client/Weapon/WeaponReload.lua"
           }
         },
         "MovementController": {

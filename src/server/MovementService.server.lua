@@ -12,7 +12,7 @@ local SlideAnimationR6 = AnimationsPlayer:WaitForChild("SlideAnimationR6")
 -- Humanoid's own ground-collision handling and tunneled through floors/ramps
 -- at speed, so the slide is now driven through WalkSpeed/Humanoid:Move()
 -- instead — the same system normal walking/sprinting already uses safely.
-local SLIDE_SPEED = 70 -- studs/s at the start of the slide
+local SLIDE_SPEED = 55 -- studs/s at the start of the slide
 local MIN_SLIDE_SPEED = 8 -- floor it decays to by the end (~crouch speed)
 local SLIDE_DURATION = 0.6
 local SLIDE_COOLDOWN = 1 -- seconds; the original script's debounce (`DB`) was declared but never actually set, so it did nothing

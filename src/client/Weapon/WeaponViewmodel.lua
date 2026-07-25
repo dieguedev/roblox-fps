@@ -88,12 +88,18 @@ function WeaponViewmodel.setup()
     viewmodel = weaponTemplate:Clone()
     viewmodel.Parent = Camera
 
+    -- Only the root needs to be Anchored (it locks the whole Motor6D-jointed
+    -- assembly in place so gravity can't touch it); anchoring every part would
+    -- also freeze the joints themselves, breaking reload/arm animations.
     for _, part in viewmodel:GetDescendants() do
         if part:IsA("BasePart") then
             part.CanCollide = false
-            part.Anchored = true
             part.CastShadow = false
         end
+    end
+    local root = viewmodel:FindFirstChild("HumanoidRootPart")
+    if root then
+        root.Anchored = true
     end
 
     lastCameraCFrame = Camera.CFrame
