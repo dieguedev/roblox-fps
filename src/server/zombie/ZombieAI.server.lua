@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local SimplePath = require(script.SimplePath)
+local ZombieConfig = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("ZombieConfig"))
 
 local zombie = script.Parent
 local humanoid = zombie:WaitForChild("Humanoid")
@@ -14,14 +15,18 @@ local rootPart = zombie:WaitForChild("HumanoidRootPart")
 -- never other players (no friendly fire).
 CollectionService:AddTag(zombie, "Zombie")
 
--- Hardcoded for now (ZombieConfig with per-type stats comes in Paso 3); 150 HP
--- matches the "Normal" zombie baseline from Juego_Completo.md.
-humanoid.MaxHealth = 150
-humanoid.Health = 150
--- A bit faster than the player's normal walk speed (16, see MovementController.client.lua)
--- so it can actually close distance while you're just walking, but still
--- slower than sprint (26) so sprinting away is a real option.
-humanoid.WalkSpeed = 18
+-- Type is set via a Studio attribute on the model so placing a Corredor is
+-- just duplicating the zombie and changing one attribute, no script edits.
+local zombieType = zombie:GetAttribute("ZombieType") or "Normal"
+local stats = ZombieConfig[zombieType]
+if not stats then
+    warn(("ZombieAI: unknown ZombieType %q on %s, falling back to Normal"):format(zombieType, zombie:GetFullName()))
+    stats = ZombieConfig.Normal
+end
+
+humanoid.MaxHealth = stats.MaxHealth
+humanoid.Health = stats.MaxHealth
+humanoid.WalkSpeed = stats.WalkSpeed
 
 -- Checked frequently (not recomputed frequently -- see the idle/moved gate
 -- below); checking only once a second meant the zombie chased a snapshot of
@@ -31,15 +36,14 @@ local REPATH_INTERVAL = 0.1 -- seconds between recompute *checks*
 local REPATH_DISTANCE = 5 -- studs the target must move since the last computed path before it's worth recomputing
 local CORPSE_CLEANUP_DELAY = 5 -- seconds the corpse stays before being removed, so kills don't pile up on the map
 
--- Hardcoded for now, same as the HP/speed values above (ZombieConfig comes in Paso 3).
-local ATTACK_RANGE = 4.5 -- studs; matches the "~4-5 studs" melee range from the plan
+local ATTACK_RANGE = stats.AttackRange
 -- Wider than ATTACK_RANGE on purpose: the swing already started at ATTACK_RANGE,
 -- so a player backing away mid-animation shouldn't fully void a hit that was
 -- already committed. Only used for the impact check below, not for deciding
 -- whether to start swinging in the first place.
 local HIT_CONNECT_RANGE = ATTACK_RANGE + 2.5
-local ATTACK_DAMAGE = 20
-local ATTACK_COOLDOWN = 1.5 -- seconds after a landed hit before the zombie can swing again
+local ATTACK_DAMAGE = stats.AttackDamage
+local ATTACK_COOLDOWN = stats.AttackCooldown -- seconds after a landed hit before the zombie can swing again
 
 -- AgentCanJump/AgentCanClimb let the zombie get over the map's obstacles instead
 -- of getting stuck at the base of them, which would let a player standing on
@@ -164,6 +168,14 @@ while humanoid.Health > 0 do
     -- The line-of-sight check only runs once range is already close, since
     -- it's the more expensive of the two conditions.
     local canAttack = inMeleeRange and hasLineOfSight(targetRoot)
+
+    if isSwinging and not canAttack then
+        -- Target stepped out of melee range (or broke line of sight) mid-swing;
+        -- cancel the animation instead of letting it play out, so the zombie
+        -- can resume chasing at full speed right away instead of eating the
+        -- rest of the attack in place.
+        attackTrack:Stop()
+    end
 
     if canAttack then
         -- Stop chasing and turn to face the target; a wall/pillar in the way

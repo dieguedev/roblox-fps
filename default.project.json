@@ -11,6 +11,9 @@
         "$ignoreUnknownInstances": true,
         "WeaponConfig": {
           "$path": "src/shared/WeaponConfig.lua"
+        },
+        "ZombieConfig": {
+          "$path": "src/shared/ZombieConfig.lua"
         }
       },
       "Remotes": {
