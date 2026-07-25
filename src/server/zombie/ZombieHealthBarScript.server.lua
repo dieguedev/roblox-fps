@@ -1,4 +1,7 @@
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LightingConfig = require(ReplicatedStorage.Modules.LightingConfig)
 
 local zombie = script.Parent
 local humanoid = zombie:WaitForChild("Humanoid")
@@ -7,6 +10,11 @@ local billboard = head:WaitForChild("HealthBillboard")
 local background = billboard.Background
 local fill = background.Fill
 local hpLabel = background.HPLabel
+
+-- Cap the healthbar's visible range to where the map's fog actually clears,
+-- so players can't read zombie HP through fog they can't see the zombie
+-- through themselves (would be a de facto wallhack).
+billboard.MaxDistance = LightingConfig.Lighting.FogEnd
 
 -- Roblox's built-in overhead healthbar would otherwise show percentage-only
 -- and duplicate our custom one, so it's turned off here.

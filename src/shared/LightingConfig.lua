@@ -9,9 +9,9 @@ local LightingConfig = {
         ColorShift_Top = Color3.fromRGB(160, 160, 165),
         ExposureCompensation = 0,
         ClockTime = 12, -- midday sun so there's plenty of light to work with
-        FogColor = Color3.fromRGB(140, 140, 145),
+        FogColor = Color3.fromRGB(180, 180, 180),
         FogStart = 15,
-        FogEnd = 160,
+        FogEnd = 120,
         ShadowSoftness = 1,
     },
 
@@ -27,12 +27,12 @@ local LightingConfig = {
     -- Atmosphere: thick mist for a "short-sighted" feel — visibility drops
     -- noticeably past mid range, forcing players to rely on close-range awareness.
     Atmosphere = {
-        Density = 0.65,
+        Density = 0.8,
         Offset = 0.3,
-        Color = Color3.fromRGB(150, 150, 155),
-        Decay = Color3.fromRGB(100, 100, 105),
+        Color = Color3.fromRGB(180, 180, 180),
+        Decay = Color3.fromRGB(140, 140, 140),
         Glare = 0,
-        Haze = 3.5,
+        Haze = 4.5,
     },
 }
 return LightingConfig
