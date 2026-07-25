@@ -52,11 +52,31 @@ local ATTACK_COOLDOWN = stats.AttackCooldown -- seconds after a landed hit befor
 -- AgentCanJump/AgentCanClimb let the zombie get over the map's obstacles instead
 -- of getting stuck at the base of them, which would let a player standing on
 -- something elevated kill zombies with zero risk.
+-- JUMP_WHEN_STUCK is turned off, though: SimplePath fires that whenever the
+-- agent barely moves for a few checks, which also happens when it's simply
+-- packed behind another zombie in a doorway or hallway. Without this override
+-- it would try to hop over its own kind like they were a wall obstacle;
+-- instead it should just wait its turn behind them.
 local path = SimplePath.new(zombie, {
     AgentCanJump = true,
     AgentCanClimb = true,
+}, {
+    JUMP_WHEN_STUCK = false,
 })
 path.Visualize = false
+
+-- Each zombie gets a stable random angle so a pack chasing the same player
+-- approaches from spread-out points around them instead of all pathing to
+-- the exact same coordinate and funneling into one line. SPREAD_RADIUS fades
+-- out as the zombie closes in (see chase loop below) so it still actually
+-- reaches melee range instead of orbiting just outside it.
+local SPREAD_RADIUS = 8 -- studs, offset applied at long range
+local SPREAD_FADE_DISTANCE = 20 -- studs from target where the offset fades to zero
+-- Random.new() (not math.random()) on purpose: zombies spawned in the same
+-- frame share math.random's default time-based seed and would otherwise all
+-- roll the exact same angle, defeating the spread entirely.
+local spreadAngle = Random.new():NextNumber(0, math.pi * 2)
+local spreadOffset = Vector3.new(math.cos(spreadAngle), 0, math.sin(spreadAngle)) * SPREAD_RADIUS
 
 local losRayParams = RaycastParams.new()
 losRayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -199,7 +219,12 @@ while humanoid.Health > 0 do
             attackTrack:Play()
         end
     elseif targetRoot then
-        local targetPosition = targetRoot.Position
+        -- Fade the per-zombie spread offset out as it closes in, so it
+        -- approaches from its own angle at range but still converges on the
+        -- real target (and reaches melee range) up close.
+        local distanceToTarget = (rootPart.Position - targetRoot.Position).Magnitude
+        local fade = math.clamp(distanceToTarget / SPREAD_FADE_DISTANCE, 0, 1)
+        local targetPosition = targetRoot.Position + spreadOffset * fade
         -- Only recompute when idle or the target has moved far enough to
         -- matter; recomputing every tick regardless of progress was what made
         -- the chase look choppy (it kept restarting MoveTo mid-stride).

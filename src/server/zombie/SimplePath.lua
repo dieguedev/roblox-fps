@@ -226,7 +226,9 @@ function Path.new(agent, agentParameters, override)
 	--Path blocked connection
 	self._path.Blocked:Connect(function(...)
 		if (self._currentWaypoint <= ... and self._currentWaypoint + 1 >= ...) and self._humanoid then
-			setJumpState(self)
+			if self._settings.JUMP_WHEN_STUCK then
+				setJumpState(self)
+			end
 			self._events.Blocked:Fire(self._agent, self._waypoints[...])
 		end
 	end)
