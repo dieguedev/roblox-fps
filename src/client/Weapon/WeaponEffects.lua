@@ -284,7 +284,11 @@ local function showDamageNumber(targetModel, damage, isHeadshot)
         billboard.Adornee = head
         billboard.AlwaysOnTop = true
         billboard.LightInfluence = 0
-        billboard.Size = UDim2.new(0, 140, 0, 60)
+        -- Scale (studs), not Offset (pixels) -- same convention as the zombie
+        -- HP billboard, so the number keeps a consistent world-space size
+        -- across devices instead of a fixed pixel box that reads oversized
+        -- on a small mobile screen.
+        billboard.Size = UDim2.new(3.3, 0, 1.35, 0)
         billboard.StudsOffset = Vector3.new(0, 1, 0)
 
         local label = Instance.new("TextLabel")
@@ -297,7 +301,8 @@ local function showDamageNumber(targetModel, damage, isHeadshot)
         label.Parent = billboard
 
         local stroke = Instance.new("UIStroke")
-        stroke.Thickness = 4
+        stroke.StrokeSizingMode = Enum.StrokeSizingMode.ScaledSize
+        stroke.Thickness = 0.15
         stroke.LineJoinMode = Enum.LineJoinMode.Round
         stroke.Parent = label
 
