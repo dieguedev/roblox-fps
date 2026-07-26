@@ -60,7 +60,10 @@ local function playReloadAnimation()
 
     local viewmodel = WeaponViewmodel.getViewmodel()
     if not viewmodel then return end
-    local controller = viewmodel:FindFirstChildOfClass("AnimationController")
+    -- Recursive lookups: AK47 keeps its AnimationController directly under
+    -- the viewmodel root, but P2000's ended up nested inside its gun
+    -- submodel — this works regardless of where it lives.
+    local controller = viewmodel:FindFirstChild("AnimationController", true)
     local animator = controller and controller:FindFirstChildOfClass("Animator")
     if not animator then return end
 
