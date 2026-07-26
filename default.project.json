@@ -132,12 +132,6 @@
         },
         "HideCursorAndShowCrosshair": {
           "$path": "src/client/HideCursorAndShowCrosshair.client.lua"
-        },
-        "AmmoUI": {
-          "$path": "src/client/AmmoUI.client.lua"
-        },
-        "RoundUI": {
-          "$path": "src/client/RoundUI.client.lua"
         }
       }
     },
@@ -171,6 +165,20 @@
         },
         "StaminaBarClient": {
           "$path": "src/client/StaminaBarClient.client.lua"
+        }
+      },
+      "AmmoHud": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "AmmoUI": {
+          "$path": "src/client/AmmoUI.client.lua"
+        }
+      },
+      "RoundHud": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "RoundUI": {
+          "$path": "src/client/RoundUI.client.lua"
         }
       }
     }
