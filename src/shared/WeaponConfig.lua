@@ -24,6 +24,10 @@ local WeaponConfig = {
         -- against WeaponTestDummy in Studio; the gun mesh isn't hand-rigged,
         -- so this is a fixed offset rather than a real grip/IK attachment).
         HeldOffset = CFrame.new(0.8, -0.3, -1.0) * CFrame.Angles(0, math.rad(90), 0),
+
+        -- Weapon slots HUD icon (2D image, not the old 3D viewport render) --
+        -- fill in with the real rbxassetid:// once it's uploaded.
+        Icon = "rbxassetid://88370215937040",
     },
     P2000 = {
         Slot = "Secondary",
@@ -52,11 +56,17 @@ local WeaponConfig = {
         -- the raw P2000 template has the gun sitting further back from the fake
         -- arms than AK47's does, so pull it forward to match.
         ViewmodelOffset = CFrame.new(0, 0, -0.5),
+
+        -- Weapon slots HUD icon -- fill in with the real rbxassetid:// once uploaded.
+        Icon = "rbxassetid://106018095444497",
     },
     Knife = {
         -- Melee slot, no attack implemented yet (equip-only placeholder).
         Slot = "Knife",
         Type = "Melee",
+
+        -- Weapon slots HUD icon -- fill in with the real rbxassetid:// once uploaded.
+        Icon = "rbxassetid://0",
     },
     -- Add other weapons here
 }

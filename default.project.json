@@ -172,6 +172,9 @@
         "$ignoreUnknownInstances": true,
         "AmmoUI": {
           "$path": "src/client/AmmoUI.client.lua"
+        },
+        "WeaponSlotsUI": {
+          "$path": "src/client/WeaponSlotsUI.client.lua"
         }
       },
       "RoundHud": {

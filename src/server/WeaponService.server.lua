@@ -172,6 +172,13 @@ local function loadPlayerData(player)
     end
     equipSlot(player, savedActiveSlot)
 
+    -- Expose which weapon sits in each slot as attributes -- the client only
+    -- ever gets EquippedWeapon (the active one) otherwise, and the weapon
+    -- slots HUD needs to show all three, not just the active one.
+    for _, slotName in SLOTS do
+        player:SetAttribute("Loadout_" .. slotName, loadouts[player][slotName])
+    end
+
     -- Re-attach the visible weapon model on every respawn (a fresh character
     -- has no weapon welded to it yet), and refill ammo for every ranged weapon
     -- in the loadout — a fresh life starts with full mags, same as most shooters.
