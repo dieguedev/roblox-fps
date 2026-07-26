@@ -291,7 +291,7 @@ local function showDamageNumber(targetModel, damage, isHeadshot)
         label.Name = "DamageLabel"
         label.BackgroundTransparency = 1
         label.Size = UDim2.new(1, 0, 1, 0)
-        label.Font = Enum.Font.SourceSansBold
+        label.FontFace = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.ExtraBold, Enum.FontStyle.Normal)
         label.TextScaled = true
         label.Text = ""
         label.Parent = billboard
