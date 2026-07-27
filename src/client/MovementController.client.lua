@@ -170,8 +170,10 @@ end)
 
 -- ============================================================
 -- Input: Shift = sprint (held), C = crouch (held) / slide (if C is pressed while
--- sprinting). Mobile has its own touch button below (same gating as C+sprint).
--- Jump is left entirely to the default Humanoid/StarterPlayer jump behavior.
+-- sprinting). Mobile has its own touch buttons below (SprintButton toggles
+-- the same isSprinting state Shift does; SlideButton requests the same
+-- slide C does). Jump is left entirely to the default Humanoid/StarterPlayer
+-- jump behavior.
 -- ============================================================
 
 UserInputService.InputBegan:Connect(function(input, processed)
@@ -193,34 +195,42 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 -- ============================================================
--- Mobile: a touch button that requests the same slide, ported as-is from the
--- original SlideClient toolbox script (same GUI properties/asset).
+-- Mobile: SprintButton (toggle) and SlideButton -- built in Studio inside
+-- StarterGui.MobileControlsGui, not generated here (same convention as
+-- JumpButton/MoveJoystick in MobileControls.client.lua). Wired here instead
+-- of there because isSprinting/setSprinting/requestSlide are private to this
+-- script.
+--
+-- SprintButton is a toggle (tap to start, tap again to stop) rather than
+-- hold-to-sprint like Shift -- holding a screen button down is uncomfortable,
+-- and toggling frees that thumb to tap SlideButton without needing a second
+-- hand.
 -- ============================================================
 
 if UserInputService.TouchEnabled then
-	local SlideHud = Instance.new("ScreenGui")
-	local Slide = Instance.new("ImageButton")
-	local UIAspectRatioConstraint = Instance.new("UIAspectRatioConstraint")
-	local UICorner = Instance.new("UICorner")
+	local mobileGui = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("MobileControlsGui")
+	local sprintButton = mobileGui:WaitForChild("SprintButton")
+	local slideButton = mobileGui:WaitForChild("SlideButton")
 
-	SlideHud.Name = "SlideHud"
-	SlideHud.Parent = LocalPlayer:WaitForChild("PlayerGui")
-	SlideHud.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	local SPRINT_BUTTON_OFF_TRANSPARENCY = 0.5
+	local SPRINT_BUTTON_ON_TRANSPARENCY = 0.1 -- less transparent while toggled on, as the "active" indicator
+	local sprintToggled = false
 
-	Slide.Name = "Slide"
-	Slide.Parent = SlideHud
-	Slide.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-	Slide.BackgroundTransparency = 1.000
-	Slide.BorderColor3 = Color3.fromRGB(0, 0, 0)
-	Slide.BorderSizePixel = 0
-	Slide.Position = UDim2.new(0.739247322, 0, 0.469973892, 0)
-	Slide.Size = UDim2.new(0.121681474, 0, 0.235294446, 0)
-	Slide.Image = "rbxassetid://121380519093487"
+	local function setSprintButtonToggled(toggled)
+		sprintToggled = toggled
+		sprintButton.BackgroundTransparency = toggled and SPRINT_BUTTON_ON_TRANSPARENCY or SPRINT_BUTTON_OFF_TRANSPARENCY
+		setSprinting(toggled)
+	end
 
-	UIAspectRatioConstraint.Parent = Slide
+	sprintButton.Activated:Connect(function()
+		setSprintButtonToggled(not sprintToggled)
+	end)
 
-	UICorner.CornerRadius = UDim.new(110, 32131)
-	UICorner.Parent = Slide
+	slideButton.Activated:Connect(requestSlide)
 
-	Slide.MouseButton1Click:Connect(requestSlide)
+	-- Respawning shouldn't carry the toggle over -- match onCharacterAdded's
+	-- own isSprinting reset above.
+	LocalPlayer.CharacterAdded:Connect(function()
+		setSprintButtonToggled(false)
+	end)
 end
