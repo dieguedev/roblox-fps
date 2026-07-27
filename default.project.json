@@ -183,6 +183,13 @@
         "RoundUI": {
           "$path": "src/client/RoundUI.client.lua"
         }
+      },
+      "MobileControlsGui": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "MobileControls": {
+          "$path": "src/client/MobileControls.client.lua"
+        }
       }
     }
   }
