@@ -209,8 +209,9 @@ end)
 
 if UserInputService.TouchEnabled then
 	local mobileGui = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("MobileControlsGui")
-	local sprintButton = mobileGui:WaitForChild("SprintButton")
-	local slideButton = mobileGui:WaitForChild("SlideButton")
+	local actionButtons = mobileGui:WaitForChild("ActionButtonsCluster")
+	local sprintButton = actionButtons:WaitForChild("SprintButton")
+	local slideButton = actionButtons:WaitForChild("SlideButton")
 
 	local SPRINT_BUTTON_OFF_TRANSPARENCY = 0.5
 	local SPRINT_BUTTON_ON_TRANSPARENCY = 0.1 -- less transparent while toggled on, as the "active" indicator

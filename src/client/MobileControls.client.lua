@@ -21,10 +21,18 @@ if not UserInputService.TouchEnabled then
     return
 end
 
-local jumpButton = GUI:WaitForChild("JumpButton")
+local actionButtons = GUI:WaitForChild("ActionButtonsCluster")
+local jumpButton = actionButtons:WaitForChild("JumpButton")
+local reloadButton = actionButtons:WaitForChild("ReloadButton")
 local joystick = GUI:WaitForChild("MoveJoystick")
 local joystickBase = joystick:WaitForChild("JoystickBase")
 local joystickThumb = joystickBase:WaitForChild("JoystickThumb")
+
+-- WeaponFiring is StarterPlayerScripts/WeaponController/WeaponFiring, cloned
+-- into PlayerScripts at runtime -- same module the R key uses to reload.
+local WeaponFiring = require(
+    LocalPlayer:WaitForChild("PlayerScripts"):WaitForChild("WeaponController"):WaitForChild("WeaponFiring")
+)
 
 -- Roblox's default touch controls (JumpButton/DynamicThumbstickFrame under
 -- PlayerGui.TouchGui) are disabled entirely via
@@ -41,6 +49,14 @@ jumpButton.Activated:Connect(function()
     if humanoid then
         humanoid.Jump = true
     end
+end)
+
+-- ============================================================
+-- Reload: same request the R key makes on desktop (WeaponFiring guards
+-- against Melee/already-reloading on its own).
+-- ============================================================
+reloadButton.Activated:Connect(function()
+    WeaponFiring.requestReload()
 end)
 
 -- ============================================================
