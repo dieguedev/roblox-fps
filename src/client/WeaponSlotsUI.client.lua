@@ -1,8 +1,10 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
 local WeaponConfig = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("WeaponConfig"))
+local WeaponEquip = require(LocalPlayer:WaitForChild("PlayerScripts"):WaitForChild("WeaponController"):WaitForChild("WeaponEquip"))
 
 -- ============================================================
 -- STYLE: only runtime-only knobs live here -- layout, colors, the square's
@@ -92,3 +94,19 @@ end
 
 LocalPlayer:GetAttributeChangedSignal("EquippedWeapon"):Connect(refreshActiveSlot)
 refreshActiveSlot()
+
+-- ============================================================
+-- Tap-to-equip: mobile only. On desktop the cursor is locked to the
+-- crosshair (see HideCursorAndShowCrosshair), so there's no free pointer to
+-- click these with -- touch doesn't need one, so it's gated explicitly here
+-- instead of relying on that.
+-- ============================================================
+if UserInputService.TouchEnabled then
+    for slotName, box in SLOT_BOXES do
+        box.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                WeaponEquip.requestEquipSlot(slotName)
+            end
+        end)
+    end
+end
