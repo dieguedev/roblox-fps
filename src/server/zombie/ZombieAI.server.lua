@@ -180,6 +180,11 @@ end
 -- Corpses shouldn't pile up once rounds are spawning many zombies (Paso 4).
 humanoid.Died:Once(function()
     Debris:AddItem(zombie, CORPSE_CLEANUP_DELAY)
+    -- A corpse is still solid/queryable for the cleanup delay above, so without
+    -- this it keeps blocking gunfire (player weapons and the turret) aimed at
+    -- whatever's standing behind it -- same rule WeaponService/turret already
+    -- use for letting bullets pass through tagged geometry.
+    CollectionService:AddTag(zombie, "BulletPass")
 end)
 
 local lastTargetPosition = nil

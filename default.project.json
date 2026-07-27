@@ -151,6 +151,13 @@
         "ZombieHealthBarScript": {
           "$path": "src/server/zombie/ZombieHealthBarScript.server.lua"
         }
+      },
+      "Torreta": {
+        "$className": "Model",
+        "$ignoreUnknownInstances": true,
+        "TurretAI": {
+          "$path": "src/server/turret/TurretAI.server.lua"
+        }
       }
     },
 
