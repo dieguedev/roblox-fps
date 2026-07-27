@@ -56,34 +56,105 @@ function WeaponEffects.createTracer(startPos, endPos, weaponName)
     end)
 end
 
+-- Layered particle burst (core flash + directional sparks + light smoke) fired
+-- from an Attachment, rather than a single flat sprite/part. Particles inherit
+-- the attachment's 3D orientation automatically, so unlike a billboarded
+-- sprite there's no manual rotation to get wrong. Uses Roblox's built-in
+-- particle textures so no asset uploads are needed.
+local MUZZLE_FLASH_CORE_TEXTURE = "rbxasset://textures/particles/fire_main.dds"
+local MUZZLE_FLASH_SPARK_TEXTURE = "rbxasset://textures/particles/sparkles_main.dds"
+local MUZZLE_FLASH_SMOKE_TEXTURE = "rbxasset://textures/particles/smoke_main.dds"
+
 function WeaponEffects.createMuzzleFlash(pos, cframe)
     local flashColor = Color3.fromRGB(255, 230, 100)
-    local flash = Instance.new("Part")
-    flash.Name = "MuzzleFlash"
-    flash.Anchored = true
-    flash.CanCollide = false
-    flash.CanQuery = false
-    flash.CanTouch = false
-    flash.Material = Enum.Material.Neon
-    flash.Color = flashColor
-    flash.Shape = Enum.PartType.Ball
-    flash.Size = Vector3.new(0.5, 0.5, 0.5)
-    flash.CFrame = cframe
-    flash.Parent = Workspace
+
+    local anchor = Instance.new("Part")
+    anchor.Name = "MuzzleFlashAnchor"
+    anchor.Anchored = true
+    anchor.CanCollide = false
+    anchor.CanQuery = false
+    anchor.CanTouch = false
+    anchor.Transparency = 1
+    anchor.Size = Vector3.new(0.1, 0.1, 0.1)
+    anchor.CFrame = cframe
+    anchor.Parent = Workspace
+
+    local attachment = Instance.new("Attachment")
+    attachment.Parent = anchor
 
     local light = Instance.new("PointLight")
     light.Color = flashColor
     light.Brightness = 6
     light.Range = 12
-    light.Parent = flash
+    light.Parent = anchor
+
+    local core = Instance.new("ParticleEmitter")
+    core.Texture = MUZZLE_FLASH_CORE_TEXTURE
+    core.Color = ColorSequence.new(flashColor)
+    core.Size = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1.2),
+        NumberSequenceKeypoint.new(1, 0),
+    })
+    core.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    core.Lifetime = NumberRange.new(0.04, 0.06)
+    core.Speed = NumberRange.new(0)
+    core.Rate = 0
+    core.LightEmission = 1
+    core.LightInfluence = 0
+    core.EmissionDirection = Enum.NormalId.Front
+    core.Rotation = NumberRange.new(0, 360)
+    core.Parent = attachment
+
+    local sparks = Instance.new("ParticleEmitter")
+    sparks.Texture = MUZZLE_FLASH_SPARK_TEXTURE
+    sparks.Color = ColorSequence.new(Color3.fromRGB(255, 200, 120))
+    sparks.Size = NumberSequence.new(0.15)
+    sparks.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.2),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    sparks.Lifetime = NumberRange.new(0.05, 0.1)
+    sparks.Speed = NumberRange.new(15, 25)
+    sparks.SpreadAngle = Vector2.new(8, 8)
+    sparks.Rate = 0
+    sparks.LightEmission = 1
+    sparks.EmissionDirection = Enum.NormalId.Front
+    sparks.Parent = attachment
+
+    local smoke = Instance.new("ParticleEmitter")
+    smoke.Texture = MUZZLE_FLASH_SMOKE_TEXTURE
+    smoke.Color = ColorSequence.new(Color3.fromRGB(120, 120, 120))
+    smoke.Size = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.4),
+        NumberSequenceKeypoint.new(1, 1.4),
+    })
+    smoke.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.6),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    smoke.Lifetime = NumberRange.new(0.3, 0.5)
+    smoke.Speed = NumberRange.new(2, 4)
+    smoke.SpreadAngle = Vector2.new(15, 15)
+    smoke.Rate = 0
+    smoke.EmissionDirection = Enum.NormalId.Front
+    smoke.Parent = attachment
+
+    core:Emit(2)
+    sparks:Emit(6)
+    smoke:Emit(2)
 
     task.spawn(function()
         for i = 1, 3 do
-            flash.Transparency = i / 3
             light.Brightness = 6 * (1 - i / 3)
             task.wait(0.02)
         end
-        flash:Destroy()
+    end)
+
+    task.delay(0.6, function()
+        anchor:Destroy()
     end)
 end
 
