@@ -56,6 +56,9 @@ local function buildFireRayParams()
     local viewmodel = WeaponViewmodel.getViewmodel()
     if viewmodel then table.insert(ignore, viewmodel) end
     if LocalPlayer.Character then table.insert(ignore, LocalPlayer.Character) end
+    for _, part in CollectionService:GetTagged("BulletPass") do
+        table.insert(ignore, part)
+    end
     rayParams.FilterDescendantsInstances = ignore
     return rayParams
 end

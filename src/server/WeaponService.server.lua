@@ -325,7 +325,11 @@ FireWeaponEvent.OnServerEvent:Connect(function(player, camOrigin, camDir)
 
     local rayParams = RaycastParams.new()
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
-    rayParams.FilterDescendantsInstances = {character}
+    local ignore = {character}
+    for _, part in CollectionService:GetTagged("BulletPass") do
+        table.insert(ignore, part)
+    end
+    rayParams.FilterDescendantsInstances = ignore
 
     local result = Workspace:Raycast(camOrigin, direction, rayParams)
     local hitPos = result and result.Position or (camOrigin + direction)
