@@ -8,7 +8,9 @@ local Modules = ReplicatedStorage:WaitForChild("Modules")
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local WeaponConfig = require(Modules:WaitForChild("WeaponConfig"))
+local GoldConfig = require(Modules:WaitForChild("GoldConfig"))
 local WeaponAttachment = require(script.Parent:WaitForChild("WeaponAttachment"))
+local GoldService = require(script.Parent:WaitForChild("GoldService"))
 local EquipWeaponEvent = Remotes:WaitForChild("EquipWeaponEvent")
 local FireWeaponEvent = Remotes:WaitForChild("FireWeaponEvent")
 local WeaponEffectsEvent = Remotes:WaitForChild("WeaponEffectsEvent")
@@ -231,6 +233,7 @@ Players.PlayerAdded:Connect(loadPlayerData)
 Players.PlayerAdded:Connect(function(player)
     player.CharacterAppearanceLoaded:Connect(disableAccessoryRaycasts)
 end)
+Players.PlayerAdded:Connect(GoldService.init)
 
 Players.PlayerRemoving:Connect(function(player)
     savePlayerData(player)
@@ -241,6 +244,7 @@ Players.PlayerRemoving:Connect(function(player)
     ammoState[player] = nil
     isReloading[player] = nil
     reloadToken[player] = nil
+    GoldService.cleanup(player)
 end)
 
 game:BindToClose(function()
@@ -355,5 +359,16 @@ FireWeaponEvent.OnServerEvent:Connect(function(player, camOrigin, camDir)
         hitHumanoid:TakeDamage(damage)
         HitmarkerEvent:FireClient(player, isHeadshot)
         DamageNumberEvent:FireClient(player, hitModel, damage, isHeadshot)
+
+        -- Gold only for the shot that actually finishes the zombie off, not
+        -- every hit -- checked right after TakeDamage so Health already
+        -- reflects this shot (no wait for the Died event/listener race).
+        if hitHumanoid.Health <= 0 then
+            local killGold = GoldConfig.KillGold
+            if isHeadshot then
+                killGold += GoldConfig.HeadshotBonusGold
+            end
+            GoldService.award(player, killGold)
+        end
     end
 end)

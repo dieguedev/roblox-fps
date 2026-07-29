@@ -17,6 +17,9 @@
         },
         "LightingConfig": {
           "$path": "src/shared/LightingConfig.lua"
+        },
+        "GoldConfig": {
+          "$path": "src/shared/GoldConfig.lua"
         }
       },
       "Remotes": {
@@ -54,6 +57,9 @@
       },
       "WeaponAttachment": {
         "$path": "src/server/WeaponAttachment.lua"
+      },
+      "GoldService": {
+        "$path": "src/server/GoldService.lua"
       },
       "MovementService": {
         "$path": "src/server/MovementService.server.lua"
@@ -101,6 +107,30 @@
             "$path": "src/server/zombie/ZombieHealthBarScript.server.lua"
           }
         }
+      },
+      "Useful": {
+        "$className": "Folder",
+        "$ignoreUnknownInstances": true,
+        "Zombie": {
+          "$className": "Model",
+          "$ignoreUnknownInstances": true,
+          "ZombieAI": {
+            "$path": "src/server/zombie/ZombieAI.server.lua",
+            "SimplePath": {
+              "$path": "src/server/zombie/SimplePath.lua"
+            }
+          },
+          "ZombieHealthBarScript": {
+            "$path": "src/server/zombie/ZombieHealthBarScript.server.lua"
+          }
+        },
+        "Torreta": {
+          "$className": "Model",
+          "$ignoreUnknownInstances": true,
+          "TurretAI": {
+            "$path": "src/server/turret/TurretAI.server.lua"
+          }
+        }
       }
     },
 
@@ -138,27 +168,7 @@
 
     "Workspace": {
       "$className": "Workspace",
-      "$ignoreUnknownInstances": true,
-      "Zombie": {
-        "$className": "Model",
-        "$ignoreUnknownInstances": true,
-        "ZombieAI": {
-          "$path": "src/server/zombie/ZombieAI.server.lua",
-          "SimplePath": {
-            "$path": "src/server/zombie/SimplePath.lua"
-          }
-        },
-        "ZombieHealthBarScript": {
-          "$path": "src/server/zombie/ZombieHealthBarScript.server.lua"
-        }
-      },
-      "Torreta": {
-        "$className": "Model",
-        "$ignoreUnknownInstances": true,
-        "TurretAI": {
-          "$path": "src/server/turret/TurretAI.server.lua"
-        }
-      }
+      "$ignoreUnknownInstances": true
     },
 
     "StarterGui": {
@@ -189,6 +199,13 @@
         "$ignoreUnknownInstances": true,
         "RoundUI": {
           "$path": "src/client/RoundUI.client.lua"
+        }
+      },
+      "GoldHud": {
+        "$className": "ScreenGui",
+        "$ignoreUnknownInstances": true,
+        "GoldUI": {
+          "$path": "src/client/GoldUI.client.lua"
         }
       },
       "MobileControlsGui": {
